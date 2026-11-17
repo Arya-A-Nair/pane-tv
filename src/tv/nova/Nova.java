@@ -264,6 +264,7 @@ public class Nova extends Activity {
         orbit = new FrameLayout(this);
         orbit.setClipChildren(false);
         sky.addView(orbit, match());
+        orbit.addView(new OrbitPath(), match());
         for (Apps.App a : apps.favourites()) {
             Card c = new Card(this, a, px(10));
             orbit.addView(c, new FrameLayout.LayoutParams(px(SAT_W), px(SAT_H)));
@@ -320,6 +321,23 @@ public class Nova extends Activity {
         }
     }
 
+    /** The orbit itself: a fine dotted ellipse, bright where it passes in front, gone behind. */
+    private final class OrbitPath extends View {
+        final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        OrbitPath() { super(Nova.this); p.setColor(PORCELAIN); }
+        @Override protected void onDraw(Canvas c) {
+            float cx = px(ORBIT_CX), cy = px(ORBIT_CY), rx = px(ORBIT_RX + 70), ry = px(ORBIT_RY + 14);
+            for (int i = 0; i < 220; i++) {
+                double th = i / 220.0 * 2 * Math.PI;
+                float z = (float) Math.cos(th);                 // 1 = nearest the viewer
+                float a = Math.max(0f, (z + 0.15f) / 1.15f);
+                if (a <= 0) continue;
+                p.setAlpha((int) (10 + 70 * a * a));
+                c.drawCircle(cx + (float) Math.sin(th) * rx, cy + z * ry, dp * (0.6f + 0.5f * a), p);
+            }
+        }
+    }
+
     private void turnTo(int target) {
         int n = sats.size();
         if (n == 0) return;
@@ -350,10 +368,11 @@ public class Nova extends Activity {
         if (sats.isEmpty()) return;
         final Apps.App a = sats.get(focus).app;
         if (!animate) { focusName.setText(a.label); focusMeta.setText(context(a)); return; }
-        focusName.animate().alpha(0f).setDuration(90).withEndAction(new Runnable() { public void run() {
+        focusName.animate().cancel();
+        focusName.animate().alpha(0f).setStartDelay(0).setDuration(90).withEndAction(new Runnable() { public void run() {
             focusName.setText(a.label);
             focusMeta.setText(context(a));
-            focusName.animate().alpha(1f).setDuration(Motion.ms(360)).start();
+            focusName.animate().alpha(1f).setStartDelay(0).setDuration(Motion.ms(360)).start();
         } }).start();
     }
 
@@ -437,7 +456,9 @@ public class Nova extends Activity {
         float a = v.getTag() instanceof Float ? (Float) v.getTag() : 1f;
         v.setAlpha(0f);
         v.setTranslationY(px(10));
-        v.animate().alpha(a).translationY(0).setStartDelay(Motion.ms(delay)).setDuration(Motion.ms(900)).setInterpolator(Motion.GLIDE).start();
+        final View fv = v;
+        v.animate().alpha(a).translationY(0).setStartDelay(Motion.ms(delay)).setDuration(Motion.ms(900)).setInterpolator(Motion.GLIDE)
+                .withEndAction(new Runnable() { public void run() { fv.animate().setStartDelay(0); } }).start();
     }
 
     // ================================================================== time & ambient
