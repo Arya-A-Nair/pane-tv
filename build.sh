@@ -11,7 +11,9 @@ rm -rf out && mkdir -p out/classes out/res
 "$BT"/aapt2 compile --dir res -o out/res.zip
 "$BT"/aapt2 link --debug-mode --manifest AndroidManifest.xml -I "$JAR" -A assets -o out/unsigned.apk out/res.zip --java out/gen
 find src out/gen -name '*.java' > out/sources.txt
-"$JAVA_HOME"/bin/javac -Xlint:-options --release 11 -cp "$JAR" -d out/classes @out/sources.txt
+# JAVAC_FLAGS is split on purpose (CI passes "-Xlint:all,-options -Werror").
+# shellcheck disable=SC2086
+"$JAVA_HOME"/bin/javac -Xlint:-options $JAVAC_FLAGS --release 11 -cp "$JAR" -d out/classes @out/sources.txt
 "$JAVA_HOME"/bin/jar cf out/classes.jar -C out/classes .
 "$BT"/d8 --release --min-api 22 --lib "$JAR" --output out out/classes.jar
 (cd out && zip -q unsigned.apk classes.dex)
