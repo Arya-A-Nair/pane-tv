@@ -6,3 +6,6 @@ out/
 *.idsig
 .claude/
 __pycache__/
+
+# design-check scratch (taste skill)
+site/.taste-skill/
