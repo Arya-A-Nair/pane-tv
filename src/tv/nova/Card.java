@@ -45,7 +45,28 @@ final class Card extends View {
         setLayerType(LAYER_TYPE_NONE, null);
     }
 
+    private final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private float depthSet = -1;
+    boolean glassRim;
+
+    /** Further round the orbit: less colour, less light. 1 = right in front. */
+    void depth(float d) {
+        if (Math.abs(d - depthSet) < 0.02f) return;
+        depthSet = d;
+        android.graphics.ColorMatrix m = new android.graphics.ColorMatrix();
+        m.setSaturation(0.25f + 0.75f * d * d);
+        float k = 0.45f + 0.55f * d;
+        android.graphics.ColorMatrix dim = new android.graphics.ColorMatrix(new float[]{k,0,0,0,0, 0,k,0,0,0, 0,0,k,0,0, 0,0,0,1,0});
+        m.postConcat(dim);
+        paint.setColorFilter(new android.graphics.ColorMatrixColorFilter(m));
+        invalidate();
+    }
+
     @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
+        rim.setStyle(Paint.Style.STROKE);
+        rim.setStrokeWidth(Math.max(1f, h * 0.008f));
+        rim.setShader(new android.graphics.LinearGradient(0, 0, 0, h, new int[]{0x8cffffff, 0x1affffff, 0x0dffffff, 0x26ffffff},
+                new float[]{0f, 0.3f, 0.75f, 1f}, Shader.TileMode.CLAMP));
         Matrix m = new Matrix();
         Bitmap b = app.banner;
         m.setScale((float) w / b.getWidth(), (float) h / b.getHeight());
@@ -55,6 +76,12 @@ final class Card extends View {
     @Override protected void onDraw(Canvas c) {
         r.set(0, 0, getWidth(), getHeight());
         c.drawRoundRect(r, radius, radius, paint);
+        if (glassRim) {
+            float w2 = rim.getStrokeWidth() / 2;
+            r.set(w2, w2, getWidth() - w2, getHeight() - w2);
+            c.drawRoundRect(r, radius, radius, rim);
+            r.set(0, 0, getWidth(), getHeight());
+        }
         if (ringed) {
             float w = Math.max(2f, getHeight() * 0.03f);
             ringPaint.setStrokeWidth(w);

@@ -55,16 +55,18 @@ public class Nova extends Activity {
     private ImageView planet;
     private Weather weather;
     private Leader leader;
-    private TextView time, date, moonName, moonNext, wCity, wTemp, wSky, wLine, wAir, hint, focusName, focusMeta;
+    private TextView time, date, moonName, moonNext, wCity, wTemp, wSky, wLine, wAir, focusName, focusMeta;
+    private View hint;
     private ImageView moonView;
     private SunArc sunArc;
     private Rockets rockets;
-    private Cosmos cosmos;
+    private Nebula nebula;
     private View pin;
 
     // orbit
     private final List<Card> sats = new ArrayList<>();
     private FrameLayout orbit;
+    private View focusGlow;
     private float angle;          // current orbit position, in item units (continuous)
     private int focus;            // item nearest the viewer
     private ValueAnimator turn;
@@ -95,7 +97,7 @@ public class Nova extends Activity {
         interM = Typeface.createFromAsset(getAssets(), "fonts/inter-medium.ttf");
 
         root = new FrameLayout(this);
-        root.setBackgroundColor(OBSIDIAN);
+        getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(OBSIDIAN));
         root.setClipChildren(false);
         sky = new FrameLayout(this);
         sky.setClipChildren(false);
@@ -135,8 +137,8 @@ public class Nova extends Activity {
     // ================================================================== planet
 
     private void buildPlanet() {
-        cosmos = new Cosmos(this, dp);
-        sky.addView(cosmos, match());
+        nebula = new Nebula(this);
+        root.addView(nebula, 0, match()); // under everything; the window shows it through
         final ImageView starfield = new ImageView(this);
         sky.addView(starfield, match());
         root.post(new Runnable() { public void run() {
@@ -207,7 +209,7 @@ public class Nova extends Activity {
         double[] sv = Earth.project(v[0], v[1], v[2]);
         double l = Math.hypot(sv[1], sv[2]) + 1e-6;
         float x = (float) (PLANET_CX / 960f + sv[1] / l * 0.55f), y = (float) (PLANET_CY / 540f - sv[2] / l * 0.75f);
-        cosmos.setSun(Math.max(0.02f, Math.min(0.98f, x)), Math.max(0.05f, Math.min(0.6f, y)));
+        nebula.setSun(Math.max(0.02f, Math.min(0.98f, x)), Math.max(0.05f, Math.min(0.6f, y)));
     }
 
     private void placePin() {
@@ -224,9 +226,9 @@ public class Nova extends Activity {
         final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         Leader() { super(Nova.this); p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(Math.max(1f, dp * 0.6f)); p.setColor(0x55e9ecf2); }
         @Override protected void onDraw(Canvas c) {
-            if (pin.getVisibility() != View.VISIBLE || wCity.getWidth() == 0) return;
+            if (pin.getVisibility() != View.VISIBLE || weatherCard.getWidth() == 0) return;
             float x0 = pin.getX() + pin.getWidth() / 2f, y0 = pin.getY() + pin.getHeight() / 2f;
-            float x1 = wCity.getX() - px(14), y1 = wCity.getY() + wCity.getHeight() / 2f;
+            float x1 = weatherCard.getX() + px(6), y1 = weatherCard.getY() + px(30);
             float elbow = x1 - px(40);
             c.drawLine(x0, y0, elbow, y1, p);
             c.drawLine(elbow, y1, x1 - px(4), y1, p);
@@ -235,51 +237,81 @@ public class Nova extends Activity {
 
     // ================================================================== sky: time, moon, weather
 
+    private LinearLayout skyCard, weatherCard;
+
+    /** A spatial glass surface: translucent, a specular rim along the top, a soft real shadow. */
+    private void glass(View v, float radiusDp, int tint, float elevationDp) {
+        Glass.apply(v, px(radiusDp), tint, dp, elevationDp);
+    }
+
     private void buildSky() {
-        time = text(manropeXL, 60, PORCELAIN, 1f);
+        time = text(manropeXL, 64, PORCELAIN, 1f);
         time.setIncludeFontPadding(false);
         time.setLetterSpacing(-0.02f);
-        place(sky, time, 46, 26);
-        date = text(inter, 13, PORCELAIN, 0.62f);
-        place(sky, date, 49, 96);
+        place(sky, time, 46, 30);
+        date = text(inter, 13.5f, PORCELAIN, 0.62f);
+        place(sky, date, 50, 104);
 
+        // the sky panel: tonight's moon and today's daylight on one sheet of glass
+        skyCard = new LinearLayout(this);
+        skyCard.setGravity(Gravity.CENTER_VERTICAL);
+        skyCard.setPadding(px(18), px(14), px(20), px(12));
+        glass(skyCard, 28, 0x661a1f2a, 24);
         moonView = new ImageView(this);
-        FrameLayout.LayoutParams ml = new FrameLayout.LayoutParams(px(58), px(58));
-        ml.leftMargin = px(384);
-        ml.topMargin = px(28);
-        sky.addView(moonView, ml);
-        moonName = text(inter, 11.5f, PORCELAIN, 0.85f);
-        place(sky, moonName, 456, 35);
-        moonNext = text(inter, 10.5f, PORCELAIN, 0.5f);
-        place(sky, moonNext, 456, 53);
-
-
-        // today's daylight, top right
+        skyCard.addView(moonView, new LinearLayout.LayoutParams(px(60), px(60)));
+        LinearLayout mt = new LinearLayout(this);
+        mt.setOrientation(LinearLayout.VERTICAL);
+        moonName = text(interM, 13, PORCELAIN, 0.95f);
+        moonNext = text(inter, 11, PORCELAIN, 0.55f);
+        moonName.setShadowLayer(0, 0, 0, 0);
+        moonNext.setShadowLayer(0, 0, 0, 0);
+        mt.addView(moonName);
+        mt.addView(moonNext);
+        LinearLayout.LayoutParams mtl = new LinearLayout.LayoutParams(px(150), -2);
+        mtl.leftMargin = px(14);
+        skyCard.addView(mt, mtl);
+        View rule = new View(this);
+        rule.setBackgroundColor(0x1fe9ecf2);
+        LinearLayout.LayoutParams rl = new LinearLayout.LayoutParams(Math.max(1, px(0.6f)), px(76));
+        rl.setMargins(px(10), 0, px(18), 0);
+        skyCard.addView(rule, rl);
         sunArc = new SunArc(this, dp, manropeL, inter);
-        FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(px(250), px(112), Gravity.TOP | Gravity.END);
-        sl.setMargins(0, px(30), px(46), 0);
-        sky.addView(sunArc, sl);
+        skyCard.addView(sunArc, new LinearLayout.LayoutParams(px(232), px(100)));
+        FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.END);
+        sl.setMargins(0, px(22), px(40), 0);
+        sky.addView(skyCard, sl);
 
-        // weather lives on the right, wired to the city on the globe
-        wCity = text(inter, 11.5f, PORCELAIN, 0.6f);
-        place(sky, wCity, 706, 330);
+        // weather: its own glass card, wired by a hairline to the city on the globe
+        weatherCard = new LinearLayout(this);
+        weatherCard.setOrientation(LinearLayout.VERTICAL);
+        weatherCard.setPadding(px(20), px(14), px(20), px(16));
+        glass(weatherCard, 24, 0x661a1f2a, 24);
+        wCity = text(inter, 12, PORCELAIN, 0.6f);
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.BOTTOM);
-        wTemp = text(manropeXL, 44, PORCELAIN, 1f);
+        wTemp = text(manropeXL, 46, PORCELAIN, 1f);
         wTemp.setIncludeFontPadding(false);
-        wSky = text(inter, 13, PORCELAIN, 0.9f);
-        wSky.setPadding(px(10), 0, 0, px(6));
+        wSky = text(inter, 13.5f, PORCELAIN, 0.9f);
+        wSky.setPadding(px(10), 0, 0, px(7));
         row.addView(wTemp);
         row.addView(wSky);
-        place(sky, row, 706, 346);
-        wLine = text(inter, 11, PORCELAIN, 0.58f);
-        wLine.setMaxWidth(px(230));
+        wLine = text(inter, 11.5f, PORCELAIN, 0.6f);
+        wAir = text(inter, 11.5f, WARN, 1f);
+        for (TextView t : new TextView[]{wCity, wTemp, wSky, wLine, wAir}) t.setShadowLayer(0, 0, 0, 0);
         wLine.setLineSpacing(px(2), 1f);
-        place(sky, wLine, 706, 402);
-        wAir = text(inter, 11, WARN, 1f);
-        wAir.setMaxWidth(px(230));
         wAir.setLineSpacing(px(2), 1f);
-        place(sky, wAir, 706, 0);
+        weatherCard.addView(wCity);
+        weatherCard.addView(row);
+        LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(px(214), -2);
+        ll.topMargin = px(6);
+        weatherCard.addView(wLine, ll);
+        LinearLayout.LayoutParams al = new LinearLayout.LayoutParams(px(214), -2);
+        al.topMargin = px(4);
+        weatherCard.addView(wAir, al);
+        FrameLayout.LayoutParams wl = new FrameLayout.LayoutParams(-2, -2);
+        wl.leftMargin = px(676);
+        wl.topMargin = px(316);
+        sky.addView(weatherCard, wl);
     }
 
     private void showWeather() {
@@ -295,11 +327,8 @@ public class Nova extends Activity {
         wAir.setText(air == null ? "" : air);
         wAir.setTextColor(weather.aqi > 100 ? WARN : PORCELAIN);
         wAir.setAlpha(weather.aqi > 100 ? 1f : 0.58f);
-        ui.post(new Runnable() { public void run() {
-            ((FrameLayout.LayoutParams) wAir.getLayoutParams()).topMargin = (int) (wLine.getY() + wLine.getHeight() + px(4));
-            wAir.requestLayout();
-            placePin();
-        } });
+        wAir.setVisibility(air == null ? View.GONE : View.VISIBLE);
+        ui.post(new Runnable() { public void run() { placePin(); } });
     }
 
     // ================================================================== orbit
@@ -309,8 +338,12 @@ public class Nova extends Activity {
         orbit.setClipChildren(false);
         sky.addView(orbit, match());
         orbit.addView(new OrbitPath(), match());
+        // a soft light in the front app's own colour, behind it
+        focusGlow = new View(this);
+        orbit.addView(focusGlow, new FrameLayout.LayoutParams(px(SAT_H * 1.9f), px(SAT_H * 1.9f)));
         for (Apps.App a : apps.favourites()) {
-            Card c = new Card(this, a, px(10));
+            Card c = new Card(this, a, px(16));
+            c.glassRim = true;
             orbit.addView(c, new FrameLayout.LayoutParams(px(SAT_W), px(SAT_H)));
             sats.add(c);
         }
@@ -325,12 +358,32 @@ public class Nova extends Activity {
         ml.topMargin = px(ORBIT_CY + ORBIT_RY + SAT_H / 2 + 52);
         sky.addView(focusMeta, ml);
 
-        hint = text(inter, 11, PORCELAIN, 0.45f);
-        hint.setText("← →  Choose        OK  Open        ↓  All apps        ≡  Settings");
-        hint.setGravity(Gravity.CENTER_HORIZONTAL);
-        FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM);
-        hl.bottomMargin = px(22);
-        sky.addView(hint, hl);
+        LinearLayout orn = new LinearLayout(this);
+        orn.setGravity(Gravity.CENTER_VERTICAL);
+        orn.setPadding(px(10), px(6), px(16), px(6));
+        glass(orn, 20, 0x8c1a1f2a, 16);
+        String[][] keys = {{"← →", "Choose"}, {"OK", "Open"}, {"↓", "All apps"}, {"≡", "Settings"}};
+        for (int i = 0; i < keys.length; i++) {
+            TextView cap = text(interM, 11, PORCELAIN, 0.95f);
+            cap.setText(keys[i][0]);
+            cap.setShadowLayer(0, 0, 0, 0);
+            cap.setGravity(Gravity.CENTER);
+            cap.setPadding(px(8), px(2), px(8), px(3));
+            glass(cap, 8, 0x26e9ecf2, 0);
+            LinearLayout.LayoutParams cl = new LinearLayout.LayoutParams(-2, -2);
+            if (i > 0) cl.leftMargin = px(18);
+            orn.addView(cap, cl);
+            TextView lab = text(inter, 11.5f, PORCELAIN, 0.7f);
+            lab.setShadowLayer(0, 0, 0, 0);
+            lab.setText(keys[i][1]);
+            LinearLayout.LayoutParams ll2 = new LinearLayout.LayoutParams(-2, -2);
+            ll2.leftMargin = px(7);
+            orn.addView(lab, ll2);
+        }
+        hint = orn;
+        FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        hl.bottomMargin = px(18);
+        sky.addView(orn, hl);
 
         focus = Math.max(0, Math.min(prefs.getInt("focus", 0), sats.size() - 1));
         angle = focus;
@@ -360,6 +413,7 @@ public class Nova extends Activity {
             float vis = Math.max(0f, Math.min(1f, (z - 0.3f) / 0.5f));      // fade out well before the far side
             c.setAlpha(vis * (depth > 0.97f ? 1f : 0.55f + 0.3f * vis));
             c.setTranslationZ(depth * px(20));
+            c.depth(depth);
             c.setRotationY(-x * 18 * Motion.scale);
             c.setCameraDistance(8000 * dp);
         }
@@ -411,6 +465,16 @@ public class Nova extends Activity {
     private void showFocus(boolean animate) {
         if (sats.isEmpty()) return;
         final Apps.App a = sats.get(focus).app;
+        int col = a.accent & 0x00ffffff;
+        android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+        g.setGradientType(android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT);
+        g.setGradientRadius(px(SAT_H * 1.9f) / 2f);                 // fades out fully inside the view
+        g.setColors(new int[]{0x55000000 | col, 0x18000000 | col, 0x00000000 | col});
+        focusGlow.setBackground(g);
+        focusGlow.setScaleX(SAT_W / SAT_H);                              // ...and widened into an ellipse
+        focusGlow.setX(px(ORBIT_CX) - px(SAT_H * 1.9f) / 2);
+        focusGlow.setY(px(ORBIT_CY + ORBIT_RY) - px(SAT_H * 1.9f) / 2 + px(10));
+        if (animate) { focusGlow.setAlpha(0.3f); focusGlow.animate().alpha(1f).setDuration(Motion.ms(700)).start(); }
         if (!animate) { focusName.setText(a.label); focusMeta.setText(context(a)); return; }
         focusName.animate().cancel();
         focusName.animate().alpha(0f).setStartDelay(0).setDuration(90).withEndAction(new Runnable() { public void run() {
@@ -532,12 +596,12 @@ public class Nova extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE);
         lastInput = SystemClock.uptimeMillis();
-        cosmos.start();
+        nebula.start();
         if (mode == Mode.AMBIENT) exitAmbient();
         if (!entered) { entered = true; enter(); } else comeBack();
     }
 
-    @Override protected void onPause() { super.onPause(); cosmos.stop(); }
+    @Override protected void onPause() { super.onPause(); nebula.stop(); }
 
     @Override protected void onNewIntent(Intent i) {
         super.onNewIntent(i);
@@ -546,7 +610,7 @@ public class Nova extends Activity {
     }
 
     private void enter() {
-        View[] seq = {time, date, moonView, moonName, moonNext, wCity, wTemp.getParent() instanceof View ? (View) wTemp.getParent() : wTemp, wLine, wAir};
+        View[] seq = {time, date, skyCard, weatherCard};
         for (int i = 0; i < seq.length; i++) rise(seq[i], 500 + i * 60);
         orbit.setAlpha(0f);
         orbit.setScaleX(0.9f);
@@ -586,29 +650,29 @@ public class Nova extends Activity {
     private void updateMoon(long now) {
         double age = Earth.moonAge(now);
         if (moonView.getDrawable() == null || ((int) (age * 4)) != (moonView.getTag() instanceof Integer ? (Integer) moonView.getTag() : -1)) {
-            moonView.setImageBitmap(Earth.moon(this, px(58), age));
+            moonView.setImageBitmap(Earth.moon(this, px(60), age));
             moonView.setTag((int) (age * 4));
         }
         moonName.setText(Earth.moonName(age) + " moon");
         double toFull = ((14.765 - age) % 29.530588853 + 29.530588853) % 29.530588853;
         String full = new SimpleDateFormat("d MMMM", Locale.getDefault()).format(now + (long) (toFull * 86400000L));
         String lit = Math.round(Earth.moonLit(age) * 100) + "% lit";
-        moonNext.setText(lit + "  \u00b7  " + (toFull < 0.6 ? "Full tonight" : "Full on " + full));
+        moonNext.setText(lit + "\n" + (toFull < 0.6 ? "Full tonight" : "Full on " + full));
     }
 
     /** Idle: the orbit and the words fall away; the planet rises and fills the screen. */
     private void enterAmbient() {
         mode = Mode.AMBIENT;
-        for (View v : new View[]{orbit, focusName, focusMeta, hint, wLine, wAir, moonName, moonNext, leader, pin})
+        for (View v : new View[]{orbit, focusName, focusMeta, hint, skyCard, leader, pin})
             v.animate().alpha(0f).setDuration(1800).start();
         planet.animate().translationY(-px(150)).scaleX(1.12f).scaleY(1.12f).setDuration(6000).setInterpolator(Motion.EASE).start();
     }
 
     private void exitAmbient() {
         mode = Mode.ORBIT;
-        for (View v : new View[]{orbit, focusName, focusMeta, hint, wLine, wAir, moonName, moonNext, leader, pin}) {
+        for (View v : new View[]{orbit, focusName, focusMeta, hint, skyCard, leader, pin}) {
             float a = v.getTag() instanceof Float ? (Float) v.getTag() : 1f;
-            v.animate().alpha(v == wAir && weather.aqi > 100 ? 1f : a).setDuration(Motion.ms(600)).start();
+            v.animate().alpha(a).setDuration(Motion.ms(600)).start();
         }
         planet.animate().translationY(0).scaleX(1f).scaleY(1f).setDuration(Motion.ms(900)).setInterpolator(Motion.GLIDE).start();
     }
@@ -766,7 +830,8 @@ public class Nova extends Activity {
         for (Card c : sats) orbit.removeView(c);
         sats.clear();
         for (Apps.App a : f) {
-            Card c = new Card(this, a, px(10));
+            Card c = new Card(this, a, px(16));
+            c.glassRim = true;
             orbit.addView(c, new FrameLayout.LayoutParams(px(SAT_W), px(SAT_H)));
             sats.add(c);
         }
