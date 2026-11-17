@@ -1,0 +1,46 @@
+name: Bug report
+description: Something in Pane is broken or behaves unexpectedly
+labels: [bug]
+body:
+  - type: input
+    id: device
+    attributes:
+      label: Device model
+      placeholder: Fire TV Stick 4K Max (2nd gen), Chromecast with Google TV, ...
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Fire OS / Android version
+      description: Fire TV - Settings > My Fire TV > About. Android TV - Settings > Device Preferences > About.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Pane version
+      description: The release you installed, for example v1.0.0.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected and what happened
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: Drag an image here. `adb exec-out screencap -p > shot.png` takes one from the TV.
