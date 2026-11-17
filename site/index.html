@@ -26,6 +26,8 @@
 <meta name="page-type" content="software">
 <link rel="preload" href="fonts/manrope-light.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/inter-regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/inter-medium.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/jbmono-regular.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/system.css">
 <link rel="stylesheet" href="assets/ui/cards.css">
 <link rel="stylesheet" href="assets/motion/motion.css">
@@ -72,20 +74,21 @@
 .room > .loop-pause { right: 16px; bottom: 16px; }
 
 /* screenshots keep the TV's 16:9 */
-#pages .panel { --p-h: auto; aspect-ratio: 16 / 9; background: #090b10; }
+#pages .panel { --p-h: auto; aspect-ratio: 16 / 9; height: auto; flex: none; background: #090b10; }
+video:focus-visible { outline: 2px solid var(--action); outline-offset: 4px; }
 
 /* the film, on Porcelain */
 .film-grid { align-items: start; }
-.film-frame { border-radius: var(--r-lg); overflow: clip; background: #090b10; box-shadow: 0 30px 60px -30px rgb(9 11 16 / .55); }
-.film-frame video { width: 100%; aspect-ratio: 16 / 9; }
+.film-frame { border-radius: var(--r-lg); background: #090b10; box-shadow: 0 30px 60px -30px rgb(9 11 16 / .55); }
+.film-frame video { width: 100%; aspect-ratio: 16 / 9; border-radius: var(--r-lg); }
 
 /* install */
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-5); counter-reset: step; }
-.steps > li { display: grid; grid-template-columns: 40px 1fr; gap: var(--s-1) var(--s-4); counter-increment: step; }
-.steps > li::before { content: counter(step); grid-row: span 2; font: 300 32px/1 var(--font-display); color: var(--accent); }
+.steps > li { display: grid; gap: var(--s-1); counter-increment: step; }
+.steps h3::before { content: counter(step); display: block; margin-bottom: var(--s-2); font: 300 24px/1 var(--font-display); color: var(--accent); }
 .steps h3 { font-size: var(--t-card); font-weight: 500; line-height: 1.35; }
-.steps p, .install-side p { color: var(--muted); }
-.steps b, .install-side b { color: var(--ink); font-weight: 500; }
+.steps p, .after p { color: var(--muted); }
+.steps b, .after b { color: var(--ink); font-weight: 500; }
 .cmd { display: grid; gap: var(--s-2); }
 .cmd + .cmd { margin-top: var(--s-5); }
 .cmd__head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
@@ -107,14 +110,14 @@ code { font: 400 .92em var(--font-mono); }
 /* privacy and source */
 .facts4 h3 { font-size: var(--t-card); font-weight: 500; margin-bottom: var(--s-2); }
 .facts4 p, .privacy-cols p { color: var(--muted); }
-.privacy-cols h3 { font: 300 var(--t-h3)/1.2 var(--font-display); letter-spacing: var(--display-tracking); margin-bottom: var(--s-3); }
+.privacy-cols h3 { font-size: var(--t-card); font-weight: 500; margin-bottom: var(--s-2); }
+.privacy-cols .stack + .stack { margin-top: var(--s-7); }
+.privacy-photo { border-radius: var(--r-lg); overflow: clip; aspect-ratio: 16 / 10; }
+.privacy-photo img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 60%; }
 .privacy-cols .btn-row { margin-top: var(--s-5); }
-.facts4 { margin-top: var(--s-8); padding-top: var(--s-6); border-top: 1px solid var(--line); }
+.facts4 { margin-top: var(--s-6); }
 
 /* the close: Earthset over the top of the last screen, the links on plain Obsidian under it */
-.footer--statement { position: relative; isolation: isolate; }
-.footer--statement > .earth { position: absolute; inset: 0 0 auto 0; height: 64%; z-index: -1; overflow: clip; }
-.footer--statement > .earth img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 0%; }
 .footer__credits { font-size: var(--t-small); color: var(--muted); max-width: 110ch; }
 .footer__credits a, .footer__legal a { text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
 
@@ -123,9 +126,6 @@ code { font: 400 .92em var(--font-mono); }
 }
 @media (max-width: 639px) {
   .tv { width: calc(100% - 2 * var(--s-4)); padding: 4px; border-radius: 10px; }
-  .steps > li { grid-template-columns: 28px 1fr; }
-  .steps > li::before { font-size: 24px; }
-  .footer--statement > .earth { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .hero__art.room { transition: none; } }
 </style>
@@ -192,7 +192,7 @@ code { font: 400 .92em var(--font-mono); }
         </div>
         <div class="grid">
           <article class="card card--row card--open m-nolift span-6">
-            <h3>See the weather, the air and the moon</h3>
+            <h3>Weather, air quality and the moon</h3>
             <p>Live weather and air quality for your city, and the real moon at tonight's phase on its actual path.</p>
             <div class="panel"><img class="frame__img" src="img/today.webp" srcset="img/today-800.webp 800w, img/today.webp 1400w" sizes="(min-width: 1024px) 628px, 92vw" width="1400" height="788" loading="lazy" decoding="async" alt="Pane's Today page: weather, hourly forecast, air quality, tonight's moon and its path across the sky"></div>
           </article>
@@ -259,10 +259,7 @@ code { font: 400 .92em var(--font-mono); }
               <pre id="cmd-win"><code>iwr https://raw.githubusercontent.com/Arya-A-Nair/pane-tv/main/install/pane-install.ps1 -OutFile pane-install.ps1
 powershell -ExecutionPolicy Bypass -File .\pane-install.ps1 192.168.1.20</code></pre>
             </div>
-            <div class="install-side">
-              <h3>Google TV and Android TV</h3>
-              <p>Download <a class="link" href="https://github.com/Arya-A-Nair/pane-tv/releases/latest/download/pane.apk">pane.apk</a>, install it (for example with the <b>Downloader</b> app or <b>Send Files to TV</b>), then press Home and choose <b>Pane</b> as your home app.</p>
-            </div>
+
           </div>
         </div>
       </div>
@@ -271,6 +268,10 @@ powershell -ExecutionPolicy Bypass -File .\pane-install.ps1 192.168.1.20</code><
           <div>
             <h3>Press Home, and Pane appears</h3>
             <p>Amazon holds the Home button for a few seconds before Pane takes over; Pane shows a still screen instead of Amazon's ads while it waits. The installer downloads the latest signed release, checks its checksum, installs it and grants the two permissions Pane needs. Run it again to update.</p>
+          </div>
+          <div>
+            <h3>Google TV and Android TV</h3>
+            <p>Download <a class="link" href="https://github.com/Arya-A-Nair/pane-tv/releases/latest/download/pane.apk">pane.apk</a>, install it (for example with the <b>Downloader</b> app or <b>Send Files to TV</b>), then press Home and choose <b>Pane</b> as your home app.</p>
           </div>
           <div>
             <h3>Remove it any time</h3>
@@ -288,22 +289,25 @@ powershell -ExecutionPolicy Bypass -File .\pane-install.ps1 192.168.1.20</code><
     </div>
   </section>
 
-  <section class="section" id="privacy" aria-labelledby="privacy-h">
+  <section class="section" id="privacy" aria-labelledby="privacy-h" style="--hm: 2">
     <div class="wrap">
       <div class="section-head">
         <h2 id="privacy-h">Privacy and how Pane works</h2>
       </div>
       <div class="grid privacy-cols">
-        <div class="span-6">
-          <h3>The only requests are for the weather</h3>
-          <p>Your approximate location comes from your public IP address (ip-api.com), and the weather and air quality for it come from Open-Meteo. Nothing else leaves the TV.</p>
-          <div class="btn-row"><a class="btn btn--secondary" href="https://github.com/Arya-A-Nair/pane-tv/blob/main/PRIVACY.md">Read the privacy details</a></div>
+        <div class="span-5">
+          <div class="stack">
+            <h3>The only requests are for the weather</h3>
+            <p>Your approximate location comes from your public IP address (ip-api.com), and the weather and air quality for it come from Open-Meteo. Nothing else leaves the TV.</p>
+            <div class="btn-row"><a class="btn btn--secondary" href="https://github.com/Arya-A-Nair/pane-tv/blob/main/PRIVACY.md">Read the privacy details</a></div>
+          </div>
+          <div class="stack">
+            <h3>MIT licensed, on GitHub</h3>
+            <p>Read the code, build it yourself or report what's broken. Releases are built and signed by GitHub Actions.</p>
+            <div class="btn-row"><a class="btn btn--secondary" href="https://github.com/Arya-A-Nair/pane-tv">See the source on GitHub</a></div>
+          </div>
         </div>
-        <div class="span-6">
-          <h3>MIT licensed, on GitHub</h3>
-          <p>Read the code, build it yourself or report what's broken. Releases are built and signed by GitHub Actions.</p>
-          <div class="btn-row"><a class="btn btn--secondary" href="https://github.com/Arya-A-Nair/pane-tv">See the source on GitHub</a></div>
-        </div>
+        <div class="privacy-photo span-7 start-6"><img src="img/earthset.webp" srcset="img/earthset-960.webp 960w, img/earthset.webp 1920w" sizes="(min-width: 1024px) 628px, 92vw" width="1920" height="1080" loading="lazy" decoding="async" alt="Earthset, one of Pane's backgrounds: the Earth rising over the Moon's horizon, photographed by NASA's Artemis II crew"></div>
       </div>
       <div class="grid facts4">
         <div class="span-3"><h3>Runs on 1.5 GB of RAM</h3><p>A plain-Java Android app with no third-party libraries, small enough for a 2018 Fire TV Stick.</p></div>
@@ -316,28 +320,26 @@ powershell -ExecutionPolicy Bypass -File .\pane-install.ps1 192.168.1.20</code><
 </main>
 
 <footer class="footer closing footer--statement" id="contact" aria-labelledby="close-h">
-  <div class="earth"><img src="img/earthset.webp" srcset="img/earthset-960.webp 960w, img/earthset.webp 1920w" sizes="100vw" width="1920" height="1080" loading="lazy" decoding="async" alt="Earthset: the Earth rising over the Moon's horizon, photographed by NASA's Artemis II crew"></div>
   <div class="wrap">
     <div class="closing__cta close--type">
       <div class="section-head">
         <h2 id="close-h">Download Pane for your TV</h2>
         <p>Free and open source, version 1.0.0, for Fire TV, Google TV and Android TV.</p>
       </div>
-      <a class="btn btn--primary btn--xl btn--wide" href="https://github.com/Arya-A-Nair/pane-tv/releases/latest/download/pane.apk">Download the APK</a>
+      <a class="btn btn--primary btn--xl" href="https://github.com/Arya-A-Nair/pane-tv/releases/latest/download/pane.apk">Download the APK</a>
     </div>
     <div class="closing__links">
       <div class="grid">
-        <div class="span-4 stack-4">
+        <div class="span-6 stack-4">
           <a class="nav__logo" href="#top">Pane</a>
           <p class="footer__lede">A free home screen for Fire TV and Android TV.</p>
         </div>
-        <div class="span-2 footer__col"><h3>Pane</h3><ul><li><a href="#pages">Features</a></li><li><a href="#film">Film</a></li><li><a href="#install">Install</a></li></ul></div>
-        <div class="span-2 footer__col"><h3>Project</h3><ul><li><a href="https://github.com/Arya-A-Nair/pane-tv">Source</a></li><li><a href="https://github.com/Arya-A-Nair/pane-tv/releases">Releases</a></li><li><a href="https://github.com/Arya-A-Nair/pane-tv/blob/main/CONTRIBUTING.md">Contributing</a></li></ul></div>
-        <div class="span-4 footer__col"><h3>Credits</h3>
-          <p class="footer__credits">Earth and Moon imagery: NASA (public domain), including Artemis II “Earthset” and ISS photography; Moon map: NASA Lunar Reconnaissance Orbiter. Weather: <a href="https://open-meteo.com">Open-Meteo</a> (CC BY 4.0). Location: <a href="https://ip-api.com">ip-api.com</a>. Fonts: <a href="https://fonts.google.com/specimen/Manrope">Manrope</a>, <a href="https://rsms.me/inter/">Inter</a> and <a href="https://www.jetbrains.com/lp/mono/">JetBrains Mono</a> (SIL OFL).</p>
-        </div>
+        <div class="span-3 footer__col"><h3>Pane</h3><ul><li><a href="#pages">Features</a></li><li><a href="#film">Film</a></li><li><a href="#install">Install</a></li></ul></div>
+        <div class="span-3 footer__col"><h3>Project</h3><ul><li><a href="https://github.com/Arya-A-Nair/pane-tv">Source</a></li><li><a href="https://github.com/Arya-A-Nair/pane-tv/releases">Releases</a></li><li><a href="https://github.com/Arya-A-Nair/pane-tv/blob/main/CONTRIBUTING.md">Contributing</a></li></ul></div>
+        
       </div>
       <div class="footer__legal">
+        <details class="credits"><summary>Imagery by NASA, weather by Open-Meteo</summary><p>Earth and Moon imagery: NASA (public domain), including Artemis II “Earthset” and ISS photography; Moon map: NASA Lunar Reconnaissance Orbiter. Weather: <a href="https://open-meteo.com">Open-Meteo</a> (CC BY 4.0). Location: <a href="https://ip-api.com">ip-api.com</a>. Fonts: <a href="https://fonts.google.com/specimen/Manrope">Manrope</a>, <a href="https://rsms.me/inter/">Inter</a> and <a href="https://www.jetbrains.com/lp/mono/">JetBrains Mono</a> (SIL OFL).</p></details>
         <span>&copy; 2026 Arya Nair, <a href="https://github.com/Arya-A-Nair/pane-tv/blob/main/LICENSE">MIT licence</a>. App names and icons in screenshots belong to their owners; Pane isn't affiliated with Amazon or Google.</span>
       </div>
     </div>
