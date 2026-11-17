@@ -10,6 +10,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -25,7 +26,7 @@ final class HomePage extends Page {
     private static final float[] HERO_SIZES = {72, 60, 50, 42};   // sp, tried in turn; below that the name takes two lines at 32
 
     private final RollingText time, temperature;
-    private final TextView date, condition, city, air, moonName, sun;
+    private final TextView date, condition, city, air, moonName, sun, hint;
     private final ImageView moon;
     private final View airDot;
     private final LinearLayout row;
@@ -55,6 +56,11 @@ final class HomePage extends Page {
             heroes[i].view.setAlpha(0f);
             ui.place(view, heroes[i].view, Ui.MARGIN - 3, 128);
         }
+
+        hint = ui.text(ui.inter, 14, Ui.MIST);   // says in words what Menu does here
+        hint.setText("Menu  ·  Move or remove");
+        ui.shadow(hint);
+        ui.place(view, hint, Ui.MARGIN - 2, 262);
 
         float w = 280, x = Ui.W - Ui.MARGIN - w;
         weatherWidget = ui.panel(view, x, Ui.TOP, w, 116);
@@ -142,6 +148,8 @@ final class HomePage extends Page {
     @Override void focus(boolean holdsFocus, boolean animate) {
         for (int i = 0; i < tiles.size(); i++) tiles.get(i).focus(holdsFocus && i == selected, animate, travel);
         travel = 0;
+        Apps.App a = tiles.get(selected).app;
+        hint.setVisibility(holdsFocus && a != null && host.apps.onHome(a) ? View.VISIBLE : View.INVISIBLE);
         showHero(animate);
     }
 
@@ -154,8 +162,37 @@ final class HomePage extends Page {
         } else if (k == KeyEvent.KEYCODE_DPAD_CENTER) {
             AppTile t = tiles.get(selected);
             Motion.press(t.disc, () -> { if (t.app == null) host.open(Pane.APPS); else host.launch(t); });
+        } else if (k == KeyEvent.KEYCODE_MENU) {
+            final Apps.App app = tiles.get(selected).app;
+            if (app == null || !host.apps.onHome(app)) return false;   // "All apps", or the app last watched standing in for a favourite: Menu opens Settings
+            boolean left = selected > 0 && tiles.get(selected - 1).app != null && host.apps.onHome(tiles.get(selected - 1).app);
+            boolean right = tiles.get(selected + 1).app != null;   // "All apps" is always last, so there is a next tile
+            List<String> labels = new ArrayList<>();
+            List<Runnable> actions = new ArrayList<>();
+            if (left) { labels.add("Move left"); actions.add(() -> move(-1)); }
+            if (right) { labels.add("Move right"); actions.add(() -> move(1)); }
+            labels.add("Remove from Home");
+            actions.add(() -> { host.apps.toggleFavourite(app); host.homeChanged(); });
+            labels.add("Cancel");
+            actions.add(null);
+            host.openSheet(tiles.get(selected), app.label, labels.toArray(new String[0]), actions.toArray(new Runnable[0]));
         } else return false;
         return true;
+    }
+
+    /** Swap the focused app with its neighbour: the two tiles slide into each other's places on a spring and the order is saved. */
+    private void move(int by) {
+        AppTile moved = tiles.get(selected), other = tiles.get(selected + by);
+        host.apps.swapFavourites(moved.app, other.app);
+        Collections.swap(tiles, selected, selected + by);
+        selected += by;
+        row.removeAllViews();
+        for (AppTile t : tiles) row.addView(t.view);
+        if (Motion.reduced) return;
+        float pitch = ui.px(PITCH);
+        moved.view.setTranslationX(-by * pitch);
+        other.view.setTranslationX(by * pitch);
+        for (AppTile t : new AppTile[]{moved, other}) t.view.animate().translationX(0).setStartDelay(0).setDuration(Motion.ms(520)).setInterpolator(Motion.GLIDE).start();
     }
 
     /** The old name slides out as the new one slides in, overlapping: the hero is never empty. */

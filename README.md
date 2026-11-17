@@ -53,7 +53,7 @@ Pane replaces it with something calm: your apps, the time, the sky outside, and 
     <td><img src="docs/media/settings.jpg" alt="Settings, including one-tap Fire TV settings"></td>
   </tr>
   <tr>
-    <td><b>Every app, one page away.</b> Pin or unpin with the menu button.</td>
+    <td><b>Every app, one page away.</b> Pin, move or hide apps with the menu button.</td>
     <td><b>Fire TV settings stay one press away.</b> Pane never hides the system: display, sound and remotes are always reachable.</td>
   </tr>
 </table>
