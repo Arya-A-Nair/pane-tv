@@ -47,6 +47,7 @@ final class Glass extends Drawable {
     }
 
     @Override public void draw(Canvas c) {
+        if ((tint >>> 24) == 0) return; // clear rows draw nothing, not an outline
         c.drawRoundRect(r, radius, radius, fill);
         c.drawRoundRect(r, radius, radius, rim);
     }

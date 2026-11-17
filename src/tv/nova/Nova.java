@@ -72,7 +72,7 @@ public class Nova extends Activity {
     private boolean launching, entered;
 
     // geometry, in dp on a 960x540 screen
-    static final float PLANET = 900, PLANET_CX = 480, PLANET_CY = 770;   // disc size and centre
+    static final float PLANET = 900, PLANET_CX = 480, PLANET_CY = 712;   // disc size and centre
     static final float ORBIT_CX = 480, ORBIT_CY = 196, ORBIT_RX = 370, ORBIT_RY = 34;
     static final float SAT_W = 204, SAT_H = 114.75f;
 
@@ -281,7 +281,7 @@ public class Nova extends Activity {
         sky.addView(focusMeta, ml);
 
         hint = text(inter, 11, PORCELAIN, 0.45f);
-        hint.setText("◀ ▶  Choose        OK  Open        ▼  All apps        ≡  Settings");
+        hint.setText("← →  Choose        OK  Open        ↓  All apps        ≡  Settings");
         hint.setGravity(Gravity.CENTER_HORIZONTAL);
         FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM);
         hl.bottomMargin = px(22);
@@ -297,7 +297,7 @@ public class Nova extends Activity {
     private void layoutOrbit() {
         int n = sats.size();
         if (n == 0) return;
-        float step = (float) (2 * Math.PI / Math.max(n, 7)); // spread at least 7 slots so neighbours keep their size
+        float step = (float) (2 * Math.PI / Math.max(n, 9)); // spread at least 7 slots so neighbours keep their size
         for (int i = 0; i < n; i++) {
             float d = i - angle;
             // wrap to the shortest way round
@@ -312,7 +312,8 @@ public class Nova extends Activity {
             c.setScaleY(s);
             c.setX(px(ORBIT_CX) + x * px(ORBIT_RX) - px(SAT_W) / 2);
             c.setY(px(ORBIT_CY) + z * px(ORBIT_RY) - px(SAT_H) / 2);
-            c.setAlpha(z < -0.2f ? 0f : Math.max(0f, Math.min(1f, (z + 0.2f) * 1.25f)) * (depth > 0.97f ? 1f : 0.8f));
+            float vis = Math.max(0f, Math.min(1f, (z - 0.3f) / 0.5f));      // fade out well before the far side
+            c.setAlpha(vis * (depth > 0.97f ? 1f : 0.55f + 0.3f * vis));
             c.setTranslationZ(depth * px(20));
             c.setRotationY(-x * 18 * Motion.scale);
             c.setCameraDistance(8000 * dp);
@@ -522,7 +523,7 @@ public class Nova extends Activity {
         int sel;
 
         Drawer() {
-            Glass.apply(sheet, px(34), 0xb81a1e26, dp, 30);
+            Glass.apply(sheet, px(34), 0xf2161a21, dp, 30);
             sheet.setClipToOutline(true);
             title.setText("All apps");
             place(sheet, title, LEFT, 30);
@@ -533,8 +534,8 @@ public class Nova extends Activity {
             grid.setClipChildren(false);
             TextView h = text(inter, 11, PORCELAIN, 0.45f);
             h.setText("OK  Open        ≡  Pin to orbit        Back  Close");
-            FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.START);
-            hl.setMargins(px(LEFT), 0, 0, px(18));
+            FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.END);
+            hl.setMargins(0, px(46), px(LEFT), 0);
             sheet.addView(h, hl);
             FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(px(LEFT * 2 + COLS * W + (COLS - 1) * GX), px(470), Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM);
             sl.bottomMargin = px(24);
@@ -573,7 +574,7 @@ public class Nova extends Activity {
             sheet.setAlpha(0f);
             sheet.setTranslationY(px(80));
             sheet.animate().alpha(1f).translationY(0).setDuration(Motion.ms(620)).setInterpolator(Motion.GLIDE).start();
-            sky.animate().alpha(0.35f).scaleX(0.97f).scaleY(0.97f).setDuration(Motion.ms(620)).setInterpolator(Motion.GLIDE).start();
+            sky.animate().alpha(0.12f).scaleX(0.97f).scaleY(0.97f).setDuration(Motion.ms(620)).setInterpolator(Motion.GLIDE).start();
             select(sel, false);
         }
 
