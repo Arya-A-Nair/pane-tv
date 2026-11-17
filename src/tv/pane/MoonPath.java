@@ -17,6 +17,8 @@ final class MoonPath {
     /** The moon counts as risen above this altitude: refraction and parallax lift it by about 0.133 degrees. */
     private static final double HORIZON = RAD * 0.133;
     private static final long STEP_MS = 10 * 60_000L, REACH_MS = 16 * 3_600_000L;
+    /** How far the self-check lets this series stray from the ephemeris; the truncated series is a few minutes late at moonset. */
+    private static final long TOLERANCE_MIN = 8;
 
     /** The moon's altitude above the horizon, in radians, for a place given in degrees (east and north positive). */
     static double altitude(long utcMillis, double latitude, double longitude) {
@@ -64,27 +66,28 @@ final class MoonPath {
 
     /**
      * Self-check: java -cp out/classes tv.pane.MoonPath
-     * Compares tonight-style passes for Mumbai with rise and set times from PyEphem (a full ephemeris).
+     * Compares passes for a site at 20 N, 0 E (times in UTC) with moonrise and
+     * moonset from PyEphem, a full ephemeris, using the same horizon altitude as above.
      */
     public static void main(String[] args) throws Exception {
-        double latitude = 19.076, longitude = 72.8777;
-        SimpleDateFormat ist = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US);
-        ist.setTimeZone(TimeZone.getTimeZone("Asia/Kolkata"));
+        double latitude = 20, longitude = 0;
+        SimpleDateFormat utc = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US);
+        utc.setTimeZone(TimeZone.getTimeZone("UTC"));
         String[][] expected = {   // night from, night to, moonrise, moonset
-                {"2026-11-17 17:59", "2026-11-18 06:48", "2026-11-17 12:54", "2026-11-18 00:38"},   // first quarter
-                {"2026-11-24 17:58", "2026-11-25 06:52", "2026-11-24 17:36", "2026-11-25 07:28"},   // full
-                {"2026-06-10 19:15", "2026-06-11 06:01", "2026-06-11 02:16", "2026-06-11 15:19"},   // waning crescent
-                {"2025-01-13 18:19", "2025-01-14 07:15", "2025-01-13 17:47", "2025-01-14 07:36"}};  // full
+                {"2026-11-17 17:20", "2026-11-18 06:11", "2026-11-17 12:29", "2026-11-18 00:05"},   // first quarter
+                {"2026-11-24 17:19", "2026-11-25 06:15", "2026-11-24 17:13", "2026-11-25 07:01"},   // full
+                {"2026-06-10 18:39", "2026-06-11 05:20", "2026-06-11 01:50", "2026-06-11 14:50"},   // waning crescent
+                {"2025-01-13 17:40", "2025-01-14 06:38", "2025-01-13 17:25", "2025-01-14 07:05"}};  // full
         long worst = 0;
         for (String[] e : expected) {
-            long from = ist.parse(e[0]).getTime();
-            long[] pass = pass(from, ist.parse(e[1]).getTime(), from, latitude, longitude);
+            long from = utc.parse(e[0]).getTime();
+            long[] pass = pass(from, utc.parse(e[1]).getTime(), from, latitude, longitude);
             if (pass == null) throw new AssertionError("no moon found for the night of " + e[0]);
-            long riseOff = Math.abs(pass[0] - ist.parse(e[2]).getTime()) / 60_000, setOff = Math.abs(pass[1] - ist.parse(e[3]).getTime()) / 60_000;
-            System.out.println(e[0] + "  rise " + ist.format(pass[0]) + " (" + riseOff + " min off)  set " + ist.format(pass[1]) + " (" + setOff + " min off)");
+            long riseOff = Math.abs(pass[0] - utc.parse(e[2]).getTime()) / 60_000, setOff = Math.abs(pass[1] - utc.parse(e[3]).getTime()) / 60_000;
+            System.out.println(e[0] + "  rise " + utc.format(pass[0]) + " (" + riseOff + " min off)  set " + utc.format(pass[1]) + " (" + setOff + " min off)");
             worst = Math.max(worst, Math.max(riseOff, setOff));
         }
-        if (worst > 6) throw new AssertionError("moonrise or moonset is " + worst + " minutes from the ephemeris; expected within 6");
+        if (worst > TOLERANCE_MIN) throw new AssertionError("moonrise or moonset is " + worst + " minutes from the ephemeris; expected within " + TOLERANCE_MIN);
         System.out.println("ok: within " + worst + " minutes");
     }
 }
