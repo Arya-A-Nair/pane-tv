@@ -15,9 +15,9 @@ import java.util.Locale;
 
 /**
  * Today: four readings to take in at a glance — weather, air, the sky (the sun by day, the
- * moon's path by night), and the moon's phase. Each has the
- * same anatomy (a quiet label, one large figure, two lines beside it) and one small drawing
- * of its own. Nothing here is selectable.
+ * moon's path by night), and the moon's phase. Each has the same anatomy (a quiet label,
+ * one large figure, two lines beside it) and one small drawing of its own. Nothing here
+ * is selectable.
  */
 final class TodayPage extends Page {
     private final RollingText temperature, airIndex;

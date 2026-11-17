@@ -11,6 +11,7 @@ import android.view.Choreographer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.util.Random;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
@@ -221,7 +222,7 @@ final class LivingSmoke extends GLSurfaceView implements GLSurfaceView.Renderer,
         texture(noiseTexture, GLES20.GL_REPEAT);
         ByteBuffer random = ByteBuffer.allocateDirect(NOISE * NOISE * 4);
         byte[] bytes = new byte[NOISE * NOISE * 4];
-        new java.util.Random(11).nextBytes(bytes);
+        new Random(11).nextBytes(bytes);
         random.put(bytes).position(0);
         GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_RGBA, NOISE, NOISE, 0, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, random);
         texture(pictureTexture, GLES20.GL_CLAMP_TO_EDGE);

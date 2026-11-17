@@ -12,6 +12,7 @@ import android.os.Handler;
 import android.view.View;
 import android.view.ViewAnimationUtils;
 import android.view.ViewGroup;
+import android.view.animation.LinearInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
@@ -198,7 +199,7 @@ final class Room implements LivingSmoke.Listener {
     void drift(boolean on) {
         smoke.zoom(on);
         sharp.animate().cancel();
-        if (on) sharp.animate().scaleX(1.08f).scaleY(1.08f).setDuration(180_000).setInterpolator(new android.view.animation.LinearInterpolator()).start();
+        if (on) sharp.animate().scaleX(1.08f).scaleY(1.08f).setDuration(180_000).setInterpolator(new LinearInterpolator()).start();
         else sharp.animate().scaleX(1f).scaleY(1f).setDuration(Motion.ms(900)).setInterpolator(Motion.GLIDE).start();
     }
 

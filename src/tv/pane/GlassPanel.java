@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
+import android.graphics.ColorFilter;
 import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Outline;
@@ -31,7 +32,7 @@ class GlassPanel extends FrameLayout {
     private Bitmap shaded;      // the frost bitmap our shader was built for
     private static Bitmap grainTile;
     /** Colour grade shared by all glass, so it follows the environment when Home re-lights it for an app. */
-    static android.graphics.ColorFilter grade;
+    static ColorFilter grade;
 
     GlassPanel(Context c, float dp, float radiusDp) {
         super(c);
