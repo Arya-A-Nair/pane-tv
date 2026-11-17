@@ -2,6 +2,19 @@
 
 Thanks for helping. Pane is intentionally small, so please keep changes small too.
 
+Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Good first contributions
+
+- Try Pane on a device we haven't tested (another Fire TV model, a Google TV, a Chromecast) and [report how it went](https://github.com/Arya-A-Nair/pane-tv/issues/new/choose), with a screenshot.
+- Translations of the few on-screen strings.
+- Accessibility: contrast, text size, reduced motion. [DESIGN.md](DESIGN.md) lists the rules, and `LayoutAudit` checks some of them.
+- Issues labelled [`good first issue`](https://github.com/Arya-A-Nair/pane-tv/labels/good%20first%20issue).
+
+## No TV? Use an emulator
+
+Android Studio's Device Manager can create an **Android TV (1080p)** emulator on API 25 or newer. Start it, then `adb install -r pane.apk` and choose Pane as the home app. The Fire TV-only parts (the Home-button watcher) don't apply there, and everything else works.
+
 ## Build
 
 Plain Java, no Gradle. You need a JDK (17+), Android build-tools 35.0.0 and platform `android-25` in `$ANDROID_HOME` (default `~/Library/Android/sdk`). Then:
@@ -12,6 +25,24 @@ PANE_TV=192.168.1.50 ./deploy.sh   # installs on your TV over adb
 ```
 
 `build.sh` creates a local keystore on first run; it is gitignored. Release signing is separate, see [docs/RELEASING.md](docs/RELEASING.md).
+
+## Where things live
+
+All the code is in `src/tv/pane/`, one class per page or part:
+
+| File | What it is |
+|---|---|
+| `Pane.java` | The activity: holds the room, the five pages, the bottom bar and the screensaver together, and routes the remote. |
+| `HomePage`, `AppsPage`, `TodayPage`, `BackgroundsPage`, `SettingsPage` | The five pages. `Page` is their base class. |
+| `BottomBar`, `AppTile`, `GlassPanel`, `SkyArc`, `RollingText` | Shared components. |
+| `Room`, `Env`, `LivingSmoke` | The background: environments, the frosted copy glass samples from, and the smoke shader. |
+| `Moon`, `MoonPath`, `Weather` | Real data: the moon's phase and path (worked out offline), weather and air quality. |
+| `Motion`, `Ui` | Design tokens and motion from `DESIGN.md`. |
+| `Watcher`, `Boot` | Fire TV only: bring Pane forward when Amazon's home screen opens. |
+| `Apps` | Installed apps, icons, favourites and recents. |
+| `Screensaver`, `LayoutAudit` | Idle mode, and a layout checker for development. |
+
+`assets/` holds the backgrounds, the moon map and fonts. `tools/` has the scripts that regenerate them (see `tools/README.md`). Read [DESIGN.md](DESIGN.md) before changing anything visual.
 
 ## Code style
 
