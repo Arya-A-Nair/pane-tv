@@ -43,7 +43,9 @@ final class Apps {
             "com.amazon.ftv.screensaver", "com.amazon.hedwig", "com.amazon.ssm", "com.amazon.vizzini.ftvcds",
             "com.android.documentsui", "com.android.providers.downloads.ui");
 
-    static final int MARK_W = 960, MARK_H = 540;   // the size banners are drawn at when a mark is lifted from them
+    /** The largest an icon is ever drawn, in dp: the app icon flying to the centre when an app opens (Nova.launch). */
+    static final float MAX_ICON_DP = 112;
+    private final int iconPx, markW, markH, density;   // icon and banner sizes follow the display; see the constructor
     static final int HOME_SLOTS = 6; // favourites shown on Home; the rest stay one page away
 
     final List<App> all = new ArrayList<>();
@@ -53,6 +55,11 @@ final class Apps {
 
     Apps(Context ctx) {
         prefs = ctx.getSharedPreferences("nova", Context.MODE_PRIVATE);
+        android.util.DisplayMetrics dm = ctx.getResources().getDisplayMetrics();
+        density = Math.max(android.util.DisplayMetrics.DENSITY_XXXHIGH, dm.densityDpi);   // never decode below xxxhdpi, more on a denser screen
+        iconPx = Math.max(192, Math.min(512, Math.round(MAX_ICON_DP * dm.density * 1.1f)));   // 246 px at 1080p, 493 px at 4K
+        markW = Math.max(960, Math.round(480 * dm.density));   // banners are lifted at 960 x 540 at 1080p, 1920 x 1080 at 4K
+        markH = markW * 9 / 16;
         pm = ctx.getPackageManager();
         List<ResolveInfo> found = new ArrayList<>();
         found.addAll(pm.queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0));
@@ -88,7 +95,7 @@ final class Apps {
         synchronized (a) {
             if (a.markLoaded) return;
             float[] detail = new float[1];
-            Bitmap banner = banner(a.info, MARK_W, MARK_H, detail);
+            Bitmap banner = banner(a.info, markW, markH, detail);
             Bitmap logo = logo(banner);
             banner.recycle();
             if (logo != null) {
@@ -129,7 +136,7 @@ final class Apps {
         Drawable d = null;
         try {
             int res = ri.activityInfo.banner != 0 ? ri.activityInfo.banner : ai.banner;
-            if (res != 0) d = pm.getResourcesForApplication(ai).getDrawableForDensity(res, android.util.DisplayMetrics.DENSITY_XXXHIGH);
+            if (res != 0) d = pm.getResourcesForApplication(ai).getDrawableForDensity(res, density);
         } catch (Exception ignored) { }   // no such density, or the package went away: fall back below
         if (d == null) d = ri.activityInfo.loadBanner(pm);
         if (d == null) d = pm.getApplicationBanner(ai);
@@ -168,61 +175,60 @@ final class Apps {
         return Color.HSVToColor(new float[]{hue, sat, 1f});
     }
 
-    static final int ROUND = 256; // px
-
     /**
      * The app's own icon at the highest density it ships, cropped to a circle. If the icon is
      * small or transparent-edged (a mark on nothing), it sits on a disc of the app's colour
      * with its banner mark instead, so every icon is a full, rich circle.
      */
     private Bitmap round(ResolveInfo ri, App a) {
-        Bitmap out = Bitmap.createBitmap(ROUND, ROUND, Bitmap.Config.ARGB_8888);
+        final int SIZE = iconPx;
+        Bitmap out = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(out);
         android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG | android.graphics.Paint.FILTER_BITMAP_FLAG);
         android.graphics.Path circle = new android.graphics.Path();
-        circle.addCircle(ROUND / 2f, ROUND / 2f, ROUND / 2f, android.graphics.Path.Direction.CW);
+        circle.addCircle(SIZE / 2f, SIZE / 2f, SIZE / 2f, android.graphics.Path.Direction.CW);
         c.clipPath(circle);
         Drawable icon = null;
         try {
             int res = ri.activityInfo.getIconResource();
             if (res == 0) res = ri.activityInfo.applicationInfo.icon;
-            icon = pm.getResourcesForApplication(ri.activityInfo.applicationInfo).getDrawableForDensity(res, android.util.DisplayMetrics.DENSITY_XXXHIGH);
+            icon = pm.getResourcesForApplication(ri.activityInfo.applicationInfo).getDrawableForDensity(res, density);
         } catch (Exception ignored) { }
         if (icon == null) icon = ri.loadIcon(pm);
-        Bitmap ib = Bitmap.createBitmap(ROUND, ROUND, Bitmap.Config.ARGB_8888);
-        icon.setBounds(0, 0, ROUND, ROUND);
+        Bitmap ib = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888);
+        icon.setBounds(0, 0, SIZE, SIZE);
         icon.draw(new Canvas(ib));
         // does the icon fill its square (an opaque tile) or float on transparency?
         int corners = 0;
-        int[] probe = {ib.getPixel(ROUND / 8, ROUND / 2), ib.getPixel(ROUND / 2, ROUND / 8), ib.getPixel(ROUND * 7 / 8, ROUND / 2), ib.getPixel(ROUND / 2, ROUND * 7 / 8)};
+        int[] probe = {ib.getPixel(SIZE / 8, SIZE / 2), ib.getPixel(SIZE / 2, SIZE / 8), ib.getPixel(SIZE * 7 / 8, SIZE / 2), ib.getPixel(SIZE / 2, SIZE * 7 / 8)};
         for (int px : probe) if ((px >>> 24) > 200) corners++;
         if (corners >= 3) {
             // opaque tile: find the tile's own edges (icons often ship with a margin)
-            int[] px = new int[ROUND * ROUND];
-            ib.getPixels(px, 0, ROUND, 0, 0, ROUND, ROUND);
-            int x0 = ROUND, y0 = ROUND, x1 = 0, y1 = 0;
-            for (int y = 0; y < ROUND; y++) for (int x = 0; x < ROUND; x++) if ((px[y * ROUND + x] >>> 24) > 200) {
+            int[] px = new int[SIZE * SIZE];
+            ib.getPixels(px, 0, SIZE, 0, 0, SIZE, SIZE);
+            int x0 = SIZE, y0 = SIZE, x1 = 0, y1 = 0;
+            for (int y = 0; y < SIZE; y++) for (int x = 0; x < SIZE; x++) if ((px[y * SIZE + x] >>> 24) > 200) {
                 if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
             }
             float bw = Math.max(1, x1 - x0), bh = Math.max(1, y1 - y0);
             float cx = (x0 + x1) / 2f, cy = (y0 + y1) / 2f;
-            float cover = ROUND / Math.min(bw, bh) * 1.16f, sc = cover;  // past the tile's rounded corners
+            float cover = SIZE / Math.min(bw, bh) * 1.16f, sc = cover;  // past the tile's rounded corners
             // If the tile is a mark on a plain colour, fill the disc with that colour and scale so the
             // whole mark fits inside the circle, instead of cropping whatever falls outside it.
             long sr = 0, sg = 0, sb = 0; int n = 0, in = 4;
-            for (int t = (int) (bw * 0.2f); t < bw * 0.8f; t += 2) for (int y : new int[]{y0 + in, y1 - in}) { int q = px[y * ROUND + x0 + t]; sr += (q >> 16) & 255; sg += (q >> 8) & 255; sb += q & 255; n++; }
-            for (int t = (int) (bh * 0.2f); t < bh * 0.8f; t += 2) for (int x : new int[]{x0 + in, x1 - in}) { int q = px[(y0 + t) * ROUND + x]; sr += (q >> 16) & 255; sg += (q >> 8) & 255; sb += q & 255; n++; }
+            for (int t = (int) (bw * 0.2f); t < bw * 0.8f; t += 2) for (int y : new int[]{y0 + in, y1 - in}) { int q = px[y * SIZE + x0 + t]; sr += (q >> 16) & 255; sg += (q >> 8) & 255; sb += q & 255; n++; }
+            for (int t = (int) (bh * 0.2f); t < bh * 0.8f; t += 2) for (int x : new int[]{x0 + in, x1 - in}) { int q = px[(y0 + t) * SIZE + x]; sr += (q >> 16) & 255; sg += (q >> 8) & 255; sb += q & 255; n++; }
             int mr = (int) (sr / n), mg = (int) (sg / n), mb = (int) (sb / n), near = 0;
-            for (int t = (int) (bw * 0.2f); t < bw * 0.8f; t += 2) for (int y : new int[]{y0 + in, y1 - in}) if (far(px[y * ROUND + x0 + t], mr, mg, mb) < 20) near++;
-            for (int t = (int) (bh * 0.2f); t < bh * 0.8f; t += 2) for (int x : new int[]{x0 + in, x1 - in}) if (far(px[(y0 + t) * ROUND + x], mr, mg, mb) < 20) near++;
+            for (int t = (int) (bw * 0.2f); t < bw * 0.8f; t += 2) for (int y : new int[]{y0 + in, y1 - in}) if (far(px[y * SIZE + x0 + t], mr, mg, mb) < 20) near++;
+            for (int t = (int) (bh * 0.2f); t < bh * 0.8f; t += 2) for (int x : new int[]{x0 + in, x1 - in}) if (far(px[(y0 + t) * SIZE + x], mr, mg, mb) < 20) near++;
             if (near > n * 0.97f) {
                 double reach = 0;
-                for (int y = y0; y <= y1; y++) for (int x = x0; x <= x1; x++) if (far(px[y * ROUND + x], mr, mg, mb) > 56) reach = Math.max(reach, Math.hypot(x - cx, y - cy));
-                if (reach > 0) sc = (float) Math.min(cover, Math.max(ROUND / Math.min(bw, bh) * 0.82f, ROUND * 0.44f / reach));
+                for (int y = y0; y <= y1; y++) for (int x = x0; x <= x1; x++) if (far(px[y * SIZE + x], mr, mg, mb) > 56) reach = Math.max(reach, Math.hypot(x - cx, y - cy));
+                if (reach > 0) sc = (float) Math.min(cover, Math.max(SIZE / Math.min(bw, bh) * 0.82f, SIZE * 0.44f / reach));
                 c.drawColor(0xff000000 | (mr << 16) | (mg << 8) | mb);
             }
             c.save();
-            c.translate(ROUND / 2f, ROUND / 2f);
+            c.translate(SIZE / 2f, SIZE / 2f);
             c.scale(sc, sc);
             c.translate(-cx, -cy);
             c.drawBitmap(ib, 0, 0, p);
@@ -233,15 +239,15 @@ final class Apps {
             Color.colorToHSV(base, hsv);
             hsv[2] = 0.32f; hsv[1] = Math.min(hsv[1], 0.6f);
             int deep = Color.HSVToColor(hsv);
-            p.setShader(new android.graphics.LinearGradient(0, 0, 0, ROUND, Color.HSVToColor(new float[]{hsv[0], hsv[1], 0.46f}), deep, android.graphics.Shader.TileMode.CLAMP));
-            c.drawRect(0, 0, ROUND, ROUND, p);
+            p.setShader(new android.graphics.LinearGradient(0, 0, 0, SIZE, Color.HSVToColor(new float[]{hsv[0], hsv[1], 0.46f}), deep, android.graphics.Shader.TileMode.CLAMP));
+            c.drawRect(0, 0, SIZE, SIZE, p);
             p.setShader(null);
             loadMark(a);
             Bitmap mark = a.logo != null ? a.logo : ib;
-            float s = Math.min(ROUND * 0.62f / mark.getWidth(), ROUND * 0.42f / mark.getHeight());
+            float s = Math.min(SIZE * 0.62f / mark.getWidth(), SIZE * 0.42f / mark.getHeight());
             if (mark == ib) s = 0.7f;
             float mw = mark.getWidth() * s, mh = mark.getHeight() * s;
-            c.drawBitmap(mark, null, new android.graphics.RectF((ROUND - mw) / 2, (ROUND - mh) / 2, (ROUND + mw) / 2, (ROUND + mh) / 2), p);
+            c.drawBitmap(mark, null, new android.graphics.RectF((SIZE - mw) / 2, (SIZE - mh) / 2, (SIZE + mw) / 2, (SIZE + mh) / 2), p);
         }
         ib.recycle();
         return out;

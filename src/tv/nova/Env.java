@@ -37,9 +37,7 @@ final class Env {
     /** Decode environment i and build its frost, without touching what is on screen. Slow: call off the main thread. Null if it cannot be read. */
     static Bitmap[] prepare(Context c, int i, int w, int h) {
         try {
-            BitmapFactory.Options o = new BitmapFactory.Options();
-            o.inPreferredConfig = Bitmap.Config.ARGB_8888;
-            Bitmap src = BitmapFactory.decodeStream(c.getAssets().open("env/" + IDS[i] + ".jpg"), null, o);
+            Bitmap src = decode(c, i, w, h);
             Bitmap scaled = src.getWidth() == w && src.getHeight() == h ? src : Bitmap.createScaledBitmap(src, w, h, true);
             if (scaled != src) src.recycle();
             Bitmap small = Bitmap.createScaledBitmap(scaled, Math.max(8, w / FROST_SCALE), Math.max(8, h / FROST_SCALE), true);
@@ -49,6 +47,29 @@ final class Env {
         } catch (java.io.IOException missing) {
             return null;
         }
+    }
+
+    /**
+     * Decode environment i at the smallest power-of-two downsample that is still at least w x h. The pictures are 4K:
+     * a 1080p screen decodes them at half size (the same memory as a 1080p picture), a 4K screen at full size.
+     */
+    static Bitmap decode(Context c, int i, int w, int h) throws java.io.IOException {
+        String path = "env/" + IDS[i] + ".jpg";
+        BitmapFactory.Options o = new BitmapFactory.Options();
+        o.inJustDecodeBounds = true;
+        java.io.InputStream in = c.getAssets().open(path);
+        try { BitmapFactory.decodeStream(in, null, o); } finally { in.close(); }
+        int sample = 1;
+        while (o.outWidth / (sample * 2) >= w && o.outHeight / (sample * 2) >= h) sample *= 2;
+        o.inJustDecodeBounds = false;
+        o.inSampleSize = sample;
+        o.inPreferredConfig = Bitmap.Config.ARGB_8888;
+        in = c.getAssets().open(path);
+        try {
+            Bitmap b = BitmapFactory.decodeStream(in, null, o);
+            if (b == null) throw new java.io.IOException(path);
+            return b;
+        } finally { in.close(); }
     }
 
     /** Make a prepared environment the current one. The caller must already have stopped showing the old bitmaps. */

@@ -1,6 +1,5 @@
 package tv.nova;
 
-import android.graphics.BitmapFactory;
 import android.graphics.Outline;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
@@ -75,9 +74,7 @@ final class BackgroundsPage extends Page {
             });
             image.setClipToOutline(true);
             image.setElevation(ui.px(6));
-            BitmapFactory.Options quarter = new BitmapFactory.Options();
-            quarter.inSampleSize = 4;
-            try { image.setImageBitmap(BitmapFactory.decodeStream(host.getAssets().open("env/" + Env.IDS[index] + ".jpg"), null, quarter)); }
+            try { image.setImageBitmap(Env.decode(host, index, ui.px(widthDp), ui.px(widthDp * 9 / 16f))); }
             catch (java.io.IOException ignored) { }   // a missing picture leaves an empty tile
             picture.addView(image, Ui.fill());
             picture.addView(outline(CORNER, Math.max(1, ui.px(0.75f)), 0x33ffffff), Ui.fill());
