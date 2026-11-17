@@ -35,7 +35,7 @@ final class TodayPage extends Page {
         TextView[] r = reading(weather, "", 58);
         city = r[0]; temperature = r[1]; condition = r[2]; range = r[3];
         hourly = new HourlyCurve(ui);
-        FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams(ui.px(250), ui.px(h1 - 40), Gravity.END);
+        FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams(ui.px(240), ui.px(h1 - 40), Gravity.END);
         hl.setMargins(0, ui.px(20), ui.px(24), 0);
         weather.addView(hourly, hl);
 
@@ -111,7 +111,7 @@ final class TodayPage extends Page {
         city.setText(ready ? w.city : "Weather");
         temperature.setText(ready ? Math.round(w.temp) + "°" : "–");
         condition.setText(ready ? w.describe() : "No reading yet");
-        range.setText(ready ? "High " + Math.round(w.hi) + "°  ·  Low " + Math.round(w.lo) + "°" : "Waiting for the network");
+        range.setText(ready ? Math.round(w.hi) + "° / " + Math.round(w.lo) + "°" : "Waiting for the network");   // short: the curve starts at 248 dp
         hourly.set(ready ? w.hourly : null, ready ? w.startHour : 0);
         airIndex.setText(aqi < 0 ? "–" : String.valueOf(aqi));
         airName.setText(aqi < 0 ? "No reading yet" : Weather.AIR_NAME[Weather.airLevel(aqi)]);

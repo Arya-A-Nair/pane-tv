@@ -40,7 +40,8 @@ final class LayoutAudit {
                 int lines = t.getLayout().getLineCount();
                 float widest = 0;
                 for (String line : t.getText().toString().split("\n")) widest = Math.max(widest, t.getPaint().measureText(line));
-                boolean cut = lines > 0 && t.getLayout().getEllipsisCount(lines - 1) > 0;
+                boolean cut = lines > 0 && (t.getLayout().getEllipsisCount(lines - 1) > 0
+                        || (lines > t.getMaxLines() && t.getMaxLines() > 0));   // more lines than are shown
                 boolean tooTall = t.getLayout().getHeight() > t.getHeight() + 1;
                 boolean tooWide = t.getMaxLines() == 1 && widest > t.getWidth() - t.getPaddingLeft() - t.getPaddingRight() + 1;
                 if (cut || tooTall || tooWide) Log.w(TAG, "text does not fit: " + name(v));

@@ -73,7 +73,7 @@ rather than by luck:
 3. **Glass is tone-mapped.** `Env.tone` caps the frosted layer at luminance 0.068 (hue
    preserved); the sheen and grain on top add about 0.02.
 
-Measured on the device, with `contrast.py` on screenshots of every page in every environment
+Measured on the device, with `tools/contrast.py` on screenshots of every page in every environment
 (worst case over all ten environments, Mist unless noted):
 
 | Page | Lowest contrast found | Where |
@@ -263,7 +263,7 @@ last watched, so OK continues it.
 226 │ Netflix · Continue · Opened 2 hours ago              ╭───────────────────────╮│
     │                                                      │ ◐  First quarter      ││
     │                                                      │    Sunrise 06:47      ││
-300 │  (◯)   ( ◉ )   (◯)   (◯)   (◯)   (◯)   (⠿)           ╰───────────────────────╯│
+294 │  (◯)   ( ◉ )   (◯)   (◯)   (◯)   (◯)   (⠿)           ╰───────────────────────╯│
     │ Netflix  Prime  Hotstar YouTube Zee 5  Sony  All apps                         │
 452 │               ╭ Home  Apps  Today  Backgrounds  Settings ╮                    │
 492 └──────────────────────────────────────────────────────────────────────────────┘
@@ -273,7 +273,8 @@ last watched, so OK continues it.
 - Row: up to six favourites and "All apps", 92 dp discs on a 121 dp pitch. If the app last
   watched is not a favourite it takes the first place.
 - Hero: the app's own mark when its banner is sharp enough to be large, otherwise its name
-  in Manrope Light 72. It changes with a 10 dp slide as focus moves.
+  in Manrope Light 72. It never leaves the left 340 dp, where the picture is graded for
+  type: a long name steps down through 60, 50 and 42 sp, then takes two lines at 32. It changes with a 10 dp slide as focus moves.
 - Hero line: `Continue · Opened 2 hours ago` for the last-watched app, `Opened yesterday`
   for others, `Press OK to open` for one never opened, the app count for "All apps".
 - Widgets (280 dp wide, not focusable): weather with the air reading; tonight's moon with the
@@ -299,7 +300,7 @@ clip. Apps that are on Home come first, marked with a Glacier dot. No glass.
     │ Today                                        Tuesday 17 November · 18:19      │
 112 │ ╭ Mumbai ──────────────────────────────────╮ ╭ Air quality ─────────────────╮ │
     │ │ 29°  Clear night        28° 27° 26° ...  │ │ 210  Very unhealthy          │ │
-    │ │      High 34° · Low 22°  •──•──•──•──•   │ │      Stay indoors if you can │ │
+    │ │      34° / 22°          •──•──•──•──•   │ │      Stay indoors if you can │ │
     │ │                         19  21  23  01   │ │ ▁▁ ▁▁ ▁▁ ▁▁ ██ ▁▁            │ │
 264 │ ╰──────────────────────────────────────────╯ ╰──────────────────────────────╯ │
 280 │ ╭ Daylight ───────────────────╮ ╭ ◐  Moon ────────────────────────────────╮  │
@@ -361,11 +362,12 @@ brings everything back.
 | `Motion` | The curves and the Reduced setting |
 | `Apps`, `Weather`, `Moon` | Data |
 | `Watcher`, `Boot` | Keeps the Home button pointing here on Fire OS |
-| `tools/environments.py` | Generates and grades the environments |
+| `tools/environments.py`, `tools/contrast.py` | Generate and grade the environments; measure contrast on a screenshot |
 
 ## 12. Checking a change
 
-- `tools/environments.py` regenerates and regrades the environments.
+- `python3 tools/environments.py` regenerates and regrades the environments;
+  `python3 tools/contrast.py shot.png home` measures a screenshot.
 - `adb shell am start -n tv.nova/.Nova --ez audit true` logs (tag `AUDIT`) any text that does
   not fit, any text under 13 sp, and any view outside the safe area.
 - Test states without touching the family's apps: `--ez dry true` (launches open nothing),

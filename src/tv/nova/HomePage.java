@@ -19,7 +19,10 @@ import java.util.Locale;
  * the air and tonight's sky. Focus starts on the app last watched, so OK continues it.
  */
 final class HomePage extends Page {
-    private static final float ROW_TOP = 300, DISC = 92, PITCH = 121;
+    private static final float ROW_TOP = 294, DISC = 92, PITCH = 121;
+    /** The hero keeps to the left 40 % of the screen, where the environment is graded dark enough for type. */
+    private static final float HERO_WIDTH = 340, HERO_HEIGHT = 88;
+    private static final float[] HERO_SIZES = {72, 60, 50, 42};   // sp, tried in turn; below that the name takes two lines at 32
 
     private final TextView time, date, heroName, heroLine, temperature, condition, city, air, moonName, sun;
     private final ImageView heroMark, moon;
@@ -54,7 +57,10 @@ final class HomePage extends Page {
         heroName.setLetterSpacing(-0.02f);
         heroName.setShadowLayer(ui.px(14), 0, ui.px(2), 0x55000000);
         mark.addView(heroName, new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM));
-        hero.addView(mark, new LinearLayout.LayoutParams(-2, ui.px(88)));
+        heroName.setMaxWidth(ui.px(HERO_WIDTH));
+        heroName.setMaxLines(2);
+        heroName.setLineSpacing(0, 0.94f);
+        hero.addView(mark, new LinearLayout.LayoutParams(-2, ui.px(HERO_HEIGHT)));
         heroLine = ui.text(ui.inter, 16, Ui.MIST);
         ui.shadow(heroLine);
         LinearLayout.LayoutParams hl = new LinearLayout.LayoutParams(-2, -2);
@@ -183,14 +189,23 @@ final class HomePage extends Page {
         // banners are too small for that to be a hero, and then the name is set in type instead.
         if (a != null) host.apps.loadMark(a);   // already warm unless focus got here within a second of starting
         float scale = a == null || a.logo == null ? 0 : Math.min(a.logoSharp / a.logo.getWidth(),
-                Math.min(ui.px(340) / (float) a.logo.getWidth(), ui.px(88) / (float) a.logo.getHeight()));
+                Math.min(ui.px(HERO_WIDTH) / (float) a.logo.getWidth(), ui.px(HERO_HEIGHT) / (float) a.logo.getHeight()));
         boolean mark = scale > 0 && (a.logo.getWidth() * scale >= ui.px(220) || a.logo.getHeight() * scale >= ui.px(64));
         heroMark.setVisibility(mark ? View.VISIBLE : View.GONE);
         heroName.setVisibility(mark ? View.GONE : View.VISIBLE);
         if (mark) {
             heroMark.setImageBitmap(a.logo);
             heroMark.setLayoutParams(new FrameLayout.LayoutParams(Math.round(a.logo.getWidth() * scale), Math.round(a.logo.getHeight() * scale), Gravity.BOTTOM));
-        } else heroName.setText(a == null ? "All apps" : a.label);
+        } else {
+            String name = a == null ? "All apps" : a.label;
+            float size = 32;
+            for (int i = HERO_SIZES.length - 1; i >= 0; i--) {
+                heroName.setTextSize(HERO_SIZES[i]);
+                if (heroName.getPaint().measureText(name) <= ui.px(HERO_WIDTH)) size = HERO_SIZES[i];
+            }
+            heroName.setTextSize(size);
+            heroName.setText(name);
+        }
 
         if (a == null) { heroLine.setText(host.apps.all.size() + " apps on this TV"); return; }
         long last = host.apps.lastOpened(a), now = System.currentTimeMillis();

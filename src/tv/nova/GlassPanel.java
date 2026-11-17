@@ -18,19 +18,17 @@ import java.util.Random;
 /**
  * Glass (DESIGN.md, "Materials"): the frosted environment behind the panel, sampled at the
  * panel's own place on screen; a faint light from above; fine grain; a hairline rim that is
- * brightest along the top edge; a soft shadow. A control made of glass turns to solid
- * Porcelain when it holds focus (setSolid).
+ * brightest along the top edge; a soft shadow.
  */
 class GlassPanel extends FrameLayout {
     final float dp;
     float radius;
     private final Paint frost = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG), sheen = new Paint(Paint.ANTI_ALIAS_FLAG),
-            grain = new Paint(Paint.ANTI_ALIAS_FLAG), rim = new Paint(Paint.ANTI_ALIAS_FLAG), fill = new Paint(Paint.ANTI_ALIAS_FLAG);
+            grain = new Paint(Paint.ANTI_ALIAS_FLAG), rim = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF r = new RectF();
     private final Matrix m = new Matrix();
     private final int[] loc = new int[2];
     private Bitmap shaded;      // the frost bitmap our shader was built for
-    private float solid;        // 0 glass .. 1 Porcelain
     private static Bitmap grainTile;
     /** Colour grade shared by all glass, so it follows the environment when Home re-lights it for an app. */
     static android.graphics.ColorFilter grade;
@@ -55,11 +53,7 @@ class GlassPanel extends FrameLayout {
             grainTile = Bitmap.createBitmap(px, n, n, Bitmap.Config.ARGB_8888);
         }
         grain.setShader(new BitmapShader(grainTile, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT));
-        fill.setColor(Ui.PORCELAIN);
     }
-
-    void setSolid(float s) { if (s != solid) { solid = s; invalidate(); } }
-    float getSolid() { return solid; }
 
     @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
         sheen.setShader(new LinearGradient(0, 0, 0, h, new int[]{0x0cffffff, 0x00ffffff}, new float[]{0f, 0.55f}, Shader.TileMode.CLAMP));
@@ -67,29 +61,23 @@ class GlassPanel extends FrameLayout {
     }
 
     @Override protected void onDraw(Canvas c) {
+        if (Env.frost == null) return;
         float w = getWidth(), h = getHeight(), rad = Math.min(radius, h / 2f);
+        if (shaded != Env.frost) { shaded = Env.frost; frost.setShader(new BitmapShader(shaded, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)); }
+        // line the frost up with the real environment behind this panel
+        getLocationOnScreen(loc);
+        float sx = getScaleX() == 0 ? 1 : getScaleX(), sy = getScaleY() == 0 ? 1 : getScaleY();
+        m.reset();
+        m.setScale(Env.FROST_SCALE / sx, Env.FROST_SCALE / sy);
+        m.postTranslate(-loc[0] / sx, -loc[1] / sy);
+        frost.getShader().setLocalMatrix(m);
+        frost.setColorFilter(grade);
         r.set(0, 0, w, h);
-        if (solid < 1f && Env.frost != null) {
-            if (shaded != Env.frost) { shaded = Env.frost; frost.setShader(new BitmapShader(shaded, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)); }
-            // line the frost up with the real environment behind this panel
-            getLocationOnScreen(loc);
-            float sx = getScaleX() == 0 ? 1 : getScaleX(), sy = getScaleY() == 0 ? 1 : getScaleY();
-            m.reset();
-            m.setScale(Env.FROST_SCALE / sx, Env.FROST_SCALE / sy);
-            m.postTranslate(-loc[0] / sx, -loc[1] / sy);
-            frost.getShader().setLocalMatrix(m);
-            frost.setColorFilter(grade);
-            c.drawRoundRect(r, rad, rad, frost);
-            c.drawRoundRect(r, rad, rad, sheen);
-            c.drawRoundRect(r, rad, rad, grain);
-            float i = rim.getStrokeWidth() / 2;
-            r.set(i, i, w - i, h - i);
-            c.drawRoundRect(r, rad - i, rad - i, rim);
-            r.set(0, 0, w, h);
-        }
-        if (solid > 0f) {
-            fill.setAlpha((int) (255 * solid));
-            c.drawRoundRect(r, rad, rad, fill);
-        }
+        c.drawRoundRect(r, rad, rad, frost);
+        c.drawRoundRect(r, rad, rad, sheen);
+        c.drawRoundRect(r, rad, rad, grain);
+        float i = rim.getStrokeWidth() / 2;
+        r.set(i, i, w - i, h - i);
+        c.drawRoundRect(r, rad - i, rad - i, rim);
     }
 }

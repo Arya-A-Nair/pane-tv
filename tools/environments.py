@@ -1,6 +1,15 @@
-"""Original environment stills: volumetric smoke lit from a 'light well' in the upper right.
-usage: gen.py outdir [name]"""
-import sys, numpy as np
+"""Makes every environment in assets/env (see DESIGN.md, "Environment").
+
+Six are original artwork: volumetric smoke, lit from a 'light well' in the upper right.
+Four are NASA photographs (public domain), cropped to 1920 x 1080 in tools/photographs.
+All ten get the same grade: luminance is soft-capped wherever Home sets text straight on
+the picture, which is what keeps that text readable.
+
+usage: python3 tools/environments.py            all ten, into assets/env
+       python3 tools/environments.py tide       one piece of artwork
+Needs numpy and Pillow.
+"""
+import os, sys, numpy as np
 from PIL import Image
 W, H = 1920, 1080
 yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
@@ -95,13 +104,6 @@ STILLS = {
     'orchid':   (34, '#08060b', '#4a2670', '#c9a2e6', '#f2cdd6'),
     'graphite': (89, '#07080a', '#343a46', '#c9d0dc', '#eef1f6'),
 }
-if __name__ == '__main__':
-    out = sys.argv[1]
-    for n, (seed, *cols) in STILLS.items():
-        if len(sys.argv) > 2 and sys.argv[2] not in (n, 'all'): continue
-        finish(grade(smoke(seed, *cols)), f'{out}/{n}.jpg', seed)
-        print(n)
-
 def photo(src, out, seed, spot=None, hi=0.42):
     global SPOT
     SPOT = spot
@@ -109,13 +111,23 @@ def photo(src, out, seed, spot=None, hi=0.42):
     a = np.where(a <= 0.04045, a / 12.92, ((a + 0.055) / 1.055) ** 2.4)
     finish(grade(a, 0.085, hi), out, seed); SPOT = None
 
-def photos(env, src, out):
-    photo(Image.open(f'{env}/earthset.jpg'), f'{out}/earthset.jpg', 1, (0.475, 0.455, 0.09, 0.07, 1.5, True), 0.8)
-    photo(Image.open(f'{env}/sunrise.jpg'), f'{out}/sunrise.jpg', 2, (0.80, 0.10, 0.22, 0.24, 2.4, False), 0.5)
-    photo(Image.open(f'{env}/aurora.jpg'), f'{out}/aurora.jpg', 3)
-    e = Image.open(f'{src}/GSFC_20171208_Archive_e001788.jpg').convert('RGB').resize((1220, 1220), Image.LANCZOS)
+def photos(src, out):
+    photo(Image.open(f'{src}/earthset.jpg'), f'{out}/earthset.jpg', 1, (0.475, 0.455, 0.09, 0.07, 1.5, True), 0.8)
+    photo(Image.open(f'{src}/sunrise.jpg'), f'{out}/sunrise.jpg', 2, (0.80, 0.10, 0.22, 0.24, 2.4, False), 0.5)
+    photo(Image.open(f'{src}/aurora.jpg'), f'{out}/aurora.jpg', 3)
+    # the whole Earth, set large in the upper right so it rises out of the light well
+    e = Image.open(f'{src}/blue-marble.jpg').convert('RGB').resize((1220, 1220), Image.LANCZOS)
     c = Image.new('RGB', (W, H)); c.paste(e, (1470 - 610, 330 - 610))
     photo(c, f'{out}/marble.jpg', 4)
 
-if __name__ == '__main__' and len(sys.argv) > 3:   # environments.py out all <photo-src-dir> <old-env-dir>
-    photos(sys.argv[4], sys.argv[3], sys.argv[1])
+if __name__ == '__main__':
+    here = os.path.dirname(os.path.abspath(__file__))
+    out = os.path.join(here, '..', 'assets', 'env')
+    only = sys.argv[1] if len(sys.argv) > 1 else None
+    for name, (seed, *colours) in STILLS.items():
+        if only in (None, name):
+            finish(grade(smoke(seed, *colours)), f'{out}/{name}.jpg', seed)
+            print(name)
+    if only is None:
+        photos(os.path.join(here, 'photographs'), out)
+        print('photographs')

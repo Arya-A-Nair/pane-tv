@@ -62,7 +62,7 @@ final class Apps {
             if (byPkg.containsKey(pkg) || HIDDEN.contains(pkg)) continue;
             App a = new App();
             a.pkg = pkg;
-            a.label = String.valueOf(ri.loadLabel(pm)).split(":| [-–|] ")[0].trim(); // "Fawesome: Watch Free…" -> "Fawesome"
+            a.label = String.valueOf(ri.loadLabel(pm)).split(":| [-–|] | by ")[0].trim();   // "Romance Movies & TV by Fawesome" -> "Romance Movies & TV"
             Intent li = pm.getLeanbackLaunchIntentForPackage(pkg);
             if (li == null) li = pm.getLaunchIntentForPackage(pkg);
             if (li == null) continue;
@@ -100,7 +100,13 @@ final class Apps {
                 t.recycle();
                 float filled = solid / (48f * 24f);
                 boolean tile = filled > 0.7f || logo.getWidth() < logo.getHeight() * 1.1f;
-                a.logoSharp = filled < 0.14f || tile ? 0 : logo.getWidth() * detail[0] * 1.2f;
+                // A mark lifted cleanly is either there or not. Lifted off a photograph, most of it is half there.
+                int[] px = new int[logo.getWidth() * logo.getHeight()];
+                logo.getPixels(px, 0, logo.getWidth(), 0, 0, logo.getWidth(), logo.getHeight());
+                int seen = 0, faint = 0;
+                for (int i = 0; i < px.length; i += 3) { int alpha = px[i] >>> 24; if (alpha > 30) { seen++; if (alpha < 220) faint++; } }
+                boolean ragged = faint > seen * 0.25f;
+                a.logoSharp = filled < 0.14f || tile || ragged ? 0 : logo.getWidth() * detail[0] * 1.2f;
                 a.logo = logo;
             }
             a.markLoaded = true;
