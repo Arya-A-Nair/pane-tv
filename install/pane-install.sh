@@ -7,6 +7,7 @@ set -euo pipefail
 PKG="${PANE_PKG:-tv.pane}"
 APK_URL="${PANE_APK_URL:-https://github.com/Arya-A-Nair/pane-tv/releases/latest/download/pane.apk}"
 ACTIVITY=".Pane"
+PANE_CERT_SHA256="af7acaab7749f513708962e48c0442159790948c7dd42ca3f7608b2db4fa7e03"
 
 ip="${PANE_TV:-}"
 apk=""
@@ -16,7 +17,13 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --apk) [ $# -ge 2 ] || { echo "--apk needs a file path" >&2; exit 2; }; apk="$2"; shift 2 ;;
     --dry-run) dry=1; shift ;;
-    -h|--help) sed -n '2,4p' "$0"; exit 0 ;;
+    -h|--help)
+      cat <<'USAGE'
+Pane installer for Fire TV / Android TV (macOS, Linux). Safe to re-run. No sudo.
+Usage: pane-install.sh [TV_IP[:PORT]] [--apk FILE] [--dry-run] [--help]
+       undo: adb uninstall tv.pane
+USAGE
+      exit 0 ;;
     -*) echo "Unknown option: $1" >&2; exit 2 ;;
     *) ip="$1"; shift ;;
   esac
@@ -54,7 +61,21 @@ case "$serial" in *[!A-Za-z0-9.:_-]*) die "that does not look like an IP address
 A() { adb -s "$serial" "$@"; }
 
 # 3. connect; the TV shows an authorization prompt the first time
-adb connect "$serial" 2>&1 || true
+# adb connect can hang for minutes on a wrong IP, so bound it (macOS has no `timeout`).
+connect() {
+  adb connect "$serial" 2>&1 &
+  local pid=$! n=0
+  while kill -0 "$pid" 2>/dev/null; do
+    if [ "$n" -ge 100 ]; then
+      kill "$pid" 2>/dev/null || true
+      die "timed out connecting to $serial. Check the IP, and that ADB debugging is on (Settings > My Fire TV > Developer options)."
+    fi
+    sleep 0.1; n=$((n + 1))
+  done
+  wait "$pid" || true
+}
+say "Connecting to $serial..."
+connect
 state=""
 for attempt in 1 2 3; do
   state="$(adb devices | awk -v s="$serial" '$1==s {print $2}')"
@@ -63,11 +84,11 @@ for attempt in 1 2 3; do
     unauthorized)
       say "The TV is asking to allow this computer. Choose 'Always allow' on the TV screen."
       if [ -r /dev/tty ]; then read -r -p "Press Enter once you have accepted... " _ </dev/tty; else sleep 10; fi
-      adb connect "$serial" >/dev/null 2>&1 || true ;;
+      connect >/dev/null 2>&1 || true ;;
     *)
       [ "$attempt" = 3 ] && break
       sleep 3
-      adb connect "$serial" >/dev/null 2>&1 || true ;;
+      connect >/dev/null 2>&1 || true ;;
   esac
 done
 [ "$state" = device ] || die "could not reach the TV at $serial (state: ${state:-not found}). Check the IP, that ADB debugging is on, and that the TV and this computer are on the same network."
@@ -90,13 +111,16 @@ if [ -z "$apk" ]; then
     run curl -fL --retry 3 -o "$apk" "$APK_URL"
   else
     curl -fL --retry 3 -o "$apk" "$APK_URL" || die "download failed: $APK_URL (is there a published release yet?)"
-    if curl -fsL -o "$tmp/pane.apk.sha256" "$APK_URL.sha256"; then
-      want="$(awk '{print $1}' "$tmp/pane.apk.sha256")"
-      if command -v sha256sum >/dev/null 2>&1; then got="$(sha256sum "$apk" | awk '{print $1}')"; else got="$(shasum -a 256 "$apk" | awk '{print $1}')"; fi
-      [ "$want" = "$got" ] || die "checksum mismatch, refusing to install"
-      say "Checksum OK."
-    else
-      say "(no checksum file found, skipping verification)"
+    curl -fsL --retry 3 -o "$tmp/pane.apk.sha256" "$APK_URL.sha256" || die "could not fetch $APK_URL.sha256, refusing to install an unverified APK"
+    want="$(awk '{print $1}' "$tmp/pane.apk.sha256")"
+    if command -v sha256sum >/dev/null 2>&1; then got="$(sha256sum "$apk" | awk '{print $1}')"; else got="$(shasum -a 256 "$apk" | awk '{print $1}')"; fi
+    [ "$want" = "$got" ] || die "checksum mismatch, refusing to install"
+    say "Checksum OK."
+    # Pin the release signing certificate when apksigner is available (it ships with Android build-tools).
+    if command -v apksigner >/dev/null 2>&1; then
+      cert="$(apksigner verify --print-certs "$apk" 2>/dev/null | awk -F': ' '/certificate SHA-256 digest/ {print $2; exit}')"
+      [ "$cert" = "$PANE_CERT_SHA256" ] || die "APK is not signed by Pane's release key (got ${cert:-none}), refusing to install"
+      say "Signature OK."
     fi
   fi
 elif [ "$dry" = 0 ] && [ ! -f "$apk" ]; then

@@ -1,6 +1,6 @@
 name: Dependabot auto-merge
 
-# Approve and auto-merge patch/minor GitHub Actions bumps once CI passes.
+# Turn on auto-merge for patch/minor GitHub Actions bumps; it merges once the owner approves and CI passes.
 # pull_request_target is safe here: nothing from the PR is checked out or run.
 on: pull_request_target
 
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   dependabot:
-    if: github.actor == 'dependabot[bot]'
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - id: meta
@@ -22,5 +22,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.html_url }}
         run: |
-          gh pr review --approve "$PR"
           gh pr merge --auto --squash "$PR"

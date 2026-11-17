@@ -12,6 +12,7 @@ $ProgressPreference = 'SilentlyContinue'  # the progress bar makes Invoke-WebReq
 $Pkg = if ($env:PANE_PKG) { $env:PANE_PKG } else { 'tv.pane' }
 $ApkUrl = if ($env:PANE_APK_URL) { $env:PANE_APK_URL } else { 'https://github.com/Arya-A-Nair/pane-tv/releases/latest/download/pane.apk' }
 $Activity = '.Pane'
+$CertSha256 = 'af7acaab7749f513708962e48c0442159790948c7dd42ca3f7608b2db4fa7e03'
 
 function Die($msg) { [Console]::Error.WriteLine("Error: $msg"); exit 1 }
 
@@ -68,7 +69,14 @@ $Serial = if ($Ip -match ':') { $Ip } else { "${Ip}:5555" }
 if ($Serial -notmatch '^[A-Za-z0-9._:-]+$') { Die "that does not look like an IP address: $Serial" }
 
 # 3. connect; the TV shows an authorization prompt the first time
-Get-Adb -Arguments @('connect', $Serial)
+# adb connect can hang on a wrong IP, so run it as a job and give up after 10 s.
+function Connect-Tv {
+  $job = Start-Job -ScriptBlock { param($s) & adb connect $s 2>&1 | Out-String } -ArgumentList $Serial
+  if (Wait-Job $job -Timeout 10) { Receive-Job $job; Remove-Job $job }
+  else { Remove-Job $job -Force; Die "timed out connecting to $Serial. Check the IP, and that ADB debugging is on (Settings > My Fire TV > Developer options)." }
+}
+Write-Output "Connecting to $Serial..."
+Connect-Tv
 $state = ''
 for ($attempt = 1; $attempt -le 3; $attempt++) {
   $state = Get-DeviceState
@@ -81,7 +89,7 @@ for ($attempt = 1; $attempt -le 3; $attempt++) {
   } else {
     Start-Sleep -Seconds 3
   }
-  Get-Adb -Arguments @('connect', $Serial) | Out-Null
+  Connect-Tv | Out-Null
 }
 if ($state -ne 'device') {
   $shown = if ($state) { $state } else { 'not found' }
@@ -108,20 +116,21 @@ try {
       [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
       try { Invoke-WebRequest -UseBasicParsing -Uri $ApkUrl -OutFile $Apk }
       catch { Die "download failed: $ApkUrl (is there a published release yet?)" }
-      # Only fetching the .sha256 may fail open (none published). The comparison fails closed.
       $shaFile = Join-Path $tmp 'pane.apk.sha256'
-      $haveSha = $true
       try { Invoke-WebRequest -UseBasicParsing -Uri "$ApkUrl.sha256" -OutFile $shaFile }
-      catch { $haveSha = $false }
-      if ($haveSha) {
-        $want = ''
-        $shaLine = Get-Content -Path $shaFile -TotalCount 1
-        if ($shaLine) { $want = ($shaLine.Trim() -split '\s+')[0].ToLower() }
-        $got = (Get-FileHash -Algorithm SHA256 -Path $Apk).Hash.ToLower()
-        if ($want -ne $got) { Die 'checksum mismatch, refusing to install' }
-        Write-Output 'Checksum OK.'
-      } else {
-        Write-Output '(no checksum file found, skipping verification)'
+      catch { Die "could not fetch $ApkUrl.sha256, refusing to install an unverified APK" }
+      $want = ''
+      $shaLine = Get-Content -Path $shaFile -TotalCount 1
+      if ($shaLine) { $want = ($shaLine.Trim() -split '\s+')[0].ToLower() }
+      $got = (Get-FileHash -Algorithm SHA256 -Path $Apk).Hash.ToLower()
+      if ($want -ne $got) { Die 'checksum mismatch, refusing to install' }
+      Write-Output 'Checksum OK.'
+      # Pin the release signing certificate when apksigner is available.
+      if (Get-Command apksigner -ErrorAction SilentlyContinue) {
+        $certLine = (& apksigner verify --print-certs $Apk 2>$null | Select-String 'certificate SHA-256 digest' | Select-Object -First 1)
+        $cert = if ($certLine) { ($certLine.Line -split ': ')[1].Trim().ToLower() } else { 'none' }
+        if ($cert -ne $CertSha256) { Die "APK is not signed by Pane's release key (got $cert), refusing to install" }
+        Write-Output 'Signature OK.'
       }
     }
   } elseif (-not $DryRun -and -not (Test-Path -LiteralPath $Apk)) {

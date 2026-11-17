@@ -29,6 +29,7 @@ final class Ui {
 
     Ui(Context c) {
         context = c;
+        clock = android.text.format.DateFormat.is24HourFormat(c) ? "HH:mm" : "h:mm";
         dp = c.getResources().getDisplayMetrics().density;
         manrope = Typeface.createFromAsset(c.getAssets(), "fonts/manrope-light.ttf");
         inter = Typeface.createFromAsset(c.getAssets(), "fonts/inter-regular.ttf");
@@ -79,6 +80,15 @@ final class Ui {
 
     static FrameLayout.LayoutParams fill() { return new FrameLayout.LayoutParams(-1, -1); }
 
-    static String time() { return new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date()); }
+    /** Clock pattern, following the TV's 12/24-hour setting (read each time a page is built). */
+    private static String clock = "HH:mm";
+
+    static String time() { return new SimpleDateFormat(clock, Locale.getDefault()).format(new Date()); }
+    /** An "HH:mm" string (sunrise, moonset...) shown the way the clock is. */
+    static String hm(String s) {
+        if (clock.charAt(0) == 'H' || s.length() < 5) return s;
+        int h = Integer.parseInt(s.substring(0, 2)) % 12;
+        return (h == 0 ? 12 : h) + s.substring(2);
+    }
     static String date() { return new SimpleDateFormat("EEEE d MMMM", Locale.getDefault()).format(new Date()); }
 }

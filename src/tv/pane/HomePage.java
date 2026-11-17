@@ -291,6 +291,6 @@ final class HomePage extends Page {
         double age = Moon.age(System.currentTimeMillis());
         moon.setImageBitmap(Moon.render(host, ui.px(44), age));
         moonName.setText(Moon.name(age));
-        sun.setText(!ready ? "" : SkyArc.isNight(w.sunrise, w.sunset) ? "Sunrise " + w.sunrise : "Sunset " + w.sunset);
+        sun.setText(!ready ? "" : SkyArc.isNight(w.sunrise, w.sunset) ? "Sunrise " + Ui.hm(w.sunrise) : "Sunset " + Ui.hm(w.sunset));
     }
 }

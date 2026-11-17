@@ -43,7 +43,7 @@ gh secret set PANE_KEY_PASSWORD --repo Arya-A-Nair/pane-tv
 ## The automated flow, end to end
 
 1. **Contributors** open PRs and add a line under `## [Unreleased]` in `CHANGELOG.md` for user-visible changes. They never bump the version.
-2. CI (`build`, `lint`) runs and a bot comments the APK size and download link. See [CONTRIBUTING.md](CONTRIBUTING.md).
+2. CI (`build`, `lint`) runs and a bot comments the APK size and download link. See [CONTRIBUTING.md](../CONTRIBUTING.md).
 3. **You review and approve.** `automerge.yml` turns on squash auto-merge when the repo owner approves, and GitHub merges once CI is green. Nothing from an outside contributor is ever merged without your approval; this is deliberate, since a merge ends up in a signed release.
 4. **To release**, open a release PR that:
    - bumps `android:versionCode` (integer, must increase every release) and `android:versionName` (for example `1.1.0`) on the `<manifest>` element of `AndroidManifest.xml`;
@@ -54,7 +54,7 @@ If the release run fails (for example a missing CHANGELOG section), fix it with 
 
 ## Things only you can do
 
-- **Approve PRs.** Auto-merge needs your approval; Dependabot's bot approval does not satisfy the code-owner rule, so Dependabot PRs also wait for your approval unless you change the `main` ruleset.
+- **Approve PRs.** Auto-merge needs your approval; Dependabot PRs get auto-merge turned on by `dependabot-automerge.yml` (patch and minor GitHub Actions bumps only), but Actions cannot approve them, so they also wait for your approval.
 - **Fork PRs:** after approving, click **Enable auto-merge** (or **Squash and merge**). The approval workflow skips forks because GitHub gives workflows a read-only token on `pull_request_review` for them.
 - **Your own PRs** (including release PRs) cannot be approved by you. Once CI is green, merge them as a repo admin using the ruleset bypass (**Merge without waiting for requirements**).
 - The release keystore and the four secrets in setup above.
