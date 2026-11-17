@@ -372,6 +372,9 @@ public class Pane extends Activity {
      *   --ez ambient true    start the screensaver now    --ez audit true  run LayoutAudit over every page
      */
     private void handleTestExtras(Intent i) {
+        // The activity is exported (it is a launcher), so only development builds honour these;
+        // otherwise any app could start Pane with, say, dry=true and stop launches from working.
+        if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) == 0) return;
         if (i == null || i.getExtras() == null) return;
         if (i.hasExtra("dry")) dryRun = i.getBooleanExtra("dry", false);
         if (i.hasExtra("aqi")) Weather.testAqi = i.getIntExtra("aqi", 0);

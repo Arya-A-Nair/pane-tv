@@ -9,7 +9,7 @@ BT=$SDK/build-tools/35.0.0
 JAR=$SDK/platforms/android-25/android.jar
 rm -rf out && mkdir -p out/classes out/res
 "$BT"/aapt2 compile --dir res -o out/res.zip
-"$BT"/aapt2 link --manifest AndroidManifest.xml -I "$JAR" -A assets -o out/unsigned.apk out/res.zip --java out/gen
+"$BT"/aapt2 link --debug-mode --manifest AndroidManifest.xml -I "$JAR" -A assets -o out/unsigned.apk out/res.zip --java out/gen
 find src out/gen -name '*.java' > out/sources.txt
 "$JAVA_HOME"/bin/javac -Xlint:-options --release 11 -cp "$JAR" -d out/classes @out/sources.txt
 "$JAVA_HOME"/bin/jar cf out/classes.jar -C out/classes .
