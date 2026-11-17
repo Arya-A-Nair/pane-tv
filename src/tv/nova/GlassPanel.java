@@ -1,35 +1,39 @@
 package tv.nova;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Outline;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.view.View;
 import android.view.ViewOutlineProvider;
 import android.widget.FrameLayout;
+import java.util.Random;
 
 /**
- * visionOS-style glass: the environment behind the panel, frosted (sampled from Env.frost at
- * the panel's own place on screen), a light veil, a sheen that is brighter at the top, a fine
- * specular rim, and a soft real shadow. Optionally lifts and brightens when it holds focus.
+ * Glass (DESIGN.md, "Materials"): the frosted environment behind the panel, sampled at the
+ * panel's own place on screen; a faint light from above; fine grain; a hairline rim that is
+ * brightest along the top edge; a soft shadow. A control made of glass turns to solid
+ * Porcelain when it holds focus (setSolid).
  */
 class GlassPanel extends FrameLayout {
     final float dp;
     float radius;
-    private final Paint frost = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG),
-            veil = new Paint(Paint.ANTI_ALIAS_FLAG), sheen = new Paint(Paint.ANTI_ALIAS_FLAG), rim = new Paint(Paint.ANTI_ALIAS_FLAG),
-            ring = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint frost = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG), sheen = new Paint(Paint.ANTI_ALIAS_FLAG),
+            grain = new Paint(Paint.ANTI_ALIAS_FLAG), rim = new Paint(Paint.ANTI_ALIAS_FLAG), fill = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF r = new RectF();
-    private final Path clip = new Path();
     private final Matrix m = new Matrix();
     private final int[] loc = new int[2];
-    private float lit; // 0..1 focus highlight
-    int veilColor = 0x14ffffff;
+    private Bitmap shaded;      // the frost bitmap our shader was built for
+    private float solid;        // 0 glass .. 1 Porcelain
+    private static Bitmap grainTile;
+    /** Colour grade shared by all glass, so it follows the environment when Home re-lights it for an app. */
+    static android.graphics.ColorFilter grade;
 
     GlassPanel(Context c, float dp, float radiusDp) {
         super(c);
@@ -38,52 +42,54 @@ class GlassPanel extends FrameLayout {
         setWillNotDraw(false);
         setClipToPadding(false);
         setOutlineProvider(new ViewOutlineProvider() {
-            public void getOutline(View v, Outline o) { o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), radius); o.setAlpha(0.6f); }
+            public void getOutline(View v, Outline o) { o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), Math.min(radius, v.getHeight() / 2f)); o.setAlpha(0.55f); }
         });
-        setElevation(16 * dp);
+        setElevation(10 * dp);
         rim.setStyle(Paint.Style.STROKE);
-        rim.setStrokeWidth(Math.max(1f, dp * 0.7f));
-        ring.setStyle(Paint.Style.STROKE);
-        ring.setStrokeWidth(Math.max(2f, dp * 1.4f));
-        ring.setColor(0xffffffff);
+        rim.setStrokeWidth(Math.max(1.5f, dp * 0.75f));
+        if (grainTile == null) {
+            int n = 96;
+            int[] px = new int[n * n];
+            Random rnd = new Random(7);
+            for (int i = 0; i < px.length; i++) px[i] = (rnd.nextInt(18) << 24) | (rnd.nextBoolean() ? 0xffffff : 0x000000);
+            grainTile = Bitmap.createBitmap(px, n, n, Bitmap.Config.ARGB_8888);
+        }
+        grain.setShader(new BitmapShader(grainTile, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT));
+        fill.setColor(Nova.PORCELAIN);
     }
 
-    void setLit(float l) { lit = l; invalidate(); }
+    void setSolid(float s) { if (s != solid) { solid = s; invalidate(); } }
+    float getSolid() { return solid; }
 
     @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
-        sheen.setShader(new LinearGradient(0, 0, 0, h, new int[]{0x2effffff, 0x0affffff, 0x05ffffff}, new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP));
-        rim.setShader(new LinearGradient(0, 0, 0, h, new int[]{0x80ffffff, 0x1fffffff, 0x0dffffff, 0x2effffff}, new float[]{0f, 0.25f, 0.7f, 1f}, Shader.TileMode.CLAMP));
+        sheen.setShader(new LinearGradient(0, 0, 0, h, new int[]{0x0cffffff, 0x00ffffff}, new float[]{0f, 0.55f}, Shader.TileMode.CLAMP));
+        rim.setShader(new LinearGradient(0, 0, 0, h, new int[]{0x70ffffff, 0x1cffffff, 0x10ffffff, 0x26ffffff}, new float[]{0f, 0.3f, 0.75f, 1f}, Shader.TileMode.CLAMP));
     }
 
     @Override protected void onDraw(Canvas c) {
-        float w = getWidth(), h = getHeight();
+        float w = getWidth(), h = getHeight(), rad = Math.min(radius, h / 2f);
         r.set(0, 0, w, h);
-        clip.reset();
-        clip.addRoundRect(r, radius, radius, Path.Direction.CW);
-        c.save();
-        c.clipPath(clip);
-        if (Env.frost != null) {
-            // place the frosted environment so it lines up with the real one behind this panel
+        if (solid < 1f && Env.frost != null) {
+            if (shaded != Env.frost) { shaded = Env.frost; frost.setShader(new BitmapShader(shaded, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)); }
+            // line the frost up with the real environment behind this panel
             getLocationOnScreen(loc);
             float sx = getScaleX() == 0 ? 1 : getScaleX(), sy = getScaleY() == 0 ? 1 : getScaleY();
             m.reset();
             m.setScale(Env.FROST_SCALE / sx, Env.FROST_SCALE / sy);
             m.postTranslate(-loc[0] / sx, -loc[1] / sy);
-            c.drawBitmap(Env.frost, m, frost);
+            frost.getShader().setLocalMatrix(m);
+            frost.setColorFilter(grade);
+            c.drawRoundRect(r, rad, rad, frost);
+            c.drawRoundRect(r, rad, rad, sheen);
+            c.drawRoundRect(r, rad, rad, grain);
+            float i = rim.getStrokeWidth() / 2;
+            r.set(i, i, w - i, h - i);
+            c.drawRoundRect(r, rad - i, rad - i, rim);
+            r.set(0, 0, w, h);
         }
-        veil.setColor(veilColor);
-        c.drawRect(r, veil);
-        if (lit > 0) { veil.setColor(((int) (34 * lit) << 24) | 0xffffff); c.drawRect(r, veil); }
-        c.drawRect(r, sheen);
-        c.restore();
-        float i = rim.getStrokeWidth() / 2;
-        r.set(i, i, w - i, h - i);
-        c.drawRoundRect(r, radius, radius, rim);
-        if (lit > 0.01f) {
-            ring.setAlpha((int) (255 * lit));
-            float j = ring.getStrokeWidth() / 2;
-            r.set(j, j, w - j, h - j);
-            c.drawRoundRect(r, radius, radius, ring);
+        if (solid > 0f) {
+            fill.setAlpha((int) (255 * solid));
+            c.drawRoundRect(r, rad, rad, fill);
         }
     }
 }
