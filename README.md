@@ -124,7 +124,7 @@ Pane has no accounts, no analytics and no ads. The only network requests are for
 ./build.sh                 # needs JDK 17+, Android build-tools 35 and platform 25
 PANE_TV=192.168.1.20 ./deploy.sh
 ```
-See [CONTRIBUTING.md](CONTRIBUTING.md) for a map of the code, how to test without a TV and what's most useful to work on. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md). Releases are built and signed by GitHub Actions; see [docs/RELEASING.md](docs/RELEASING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) (AI agents: [AGENTS.md](AGENTS.md)) for a map of the code, how to test without a TV and what's most useful to work on. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md). Releases are built and signed by GitHub Actions; see [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Credits
 

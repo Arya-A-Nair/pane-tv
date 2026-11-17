@@ -1,0 +1,41 @@
+name: PR preview comment
+
+# After CI finishes on a PR (fork or not), post one sticky comment with the APK size and
+# a link to the run's pane-apk artifact. Runs from main with a write token, so it never
+# checks out or executes PR code: it only reads the artifact's file size.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  actions: read
+  pull-requests: write
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --search "$SHA" --json number --jq '.[0].number // empty')
+          [ -n "$pr" ] || { echo "No open PR for $SHA"; exit 0; }
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" -n pane-apk -D apk
+          size=$(stat -c %s apk/pane.apk)
+          {
+            echo "<!-- pane-preview -->"
+            echo "**Debug APK for \`${SHA:0:7}\`:** $((size / 1024)) KiB"
+            echo
+            echo "Download the \`pane-apk\` artifact from the [CI run]($RUN_URL) (kept 14 days), unzip, then \`adb install -r pane.apk\`. Signed with a throwaway key."
+          } > body.md
+          cid=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$pr/comments" --jq '.[] | select(.body | startswith("<!-- pane-preview -->")) | .id' | head -1)
+          if [ -n "$cid" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$cid" -F body=@body.md >/dev/null
+          else
+            gh pr comment "$pr" --repo "$GITHUB_REPOSITORY" --body-file body.md
+          fi
