@@ -24,9 +24,11 @@ Pane replaces it with something calm: your apps, the time, the sky outside, and 
 
 ## See it move
 
-<!-- launch film goes here -->
+<a href="docs/media/pane-launch.mp4"><img src="docs/media/poster.jpg" alt="Watch the 44-second launch film" width="100%"></a>
 
-<sub>Recorded on a 2018 Fire TV Stick 4K.</sub>
+<img src="docs/media/colour-spread.gif" alt="Moving between apps: the new app's colour spreads through the smoke like dye" width="100%">
+
+<sub>Real footage from a 2018 Fire TV Stick 4K. Music: "After" by SondreDrakensson (freesound.org), CC BY 4.0.</sub>
 
 ## What you get
 
@@ -124,6 +126,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Releases are built and signed by GitHub 
 - Moon surface map: NASA Lunar Reconnaissance Orbiter (public domain).
 - Map data: [Natural Earth](https://www.naturalearthdata.com) (public domain).
 - Weather and air quality: [Open-Meteo](https://open-meteo.com) (CC BY 4.0). Location: [ip-api.com](https://ip-api.com).
+- Launch film music: "After" by SondreDrakensson ([freesound.org](https://freesound.org/s/558260/)), CC BY 4.0. Sound effects: CC0, from Freesound.
 - Fonts: [Manrope](https://github.com/sharanda/manrope), [Inter](https://rsms.me/inter/) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (SIL Open Font License).
 
 App names and icons shown in screenshots belong to their owners. Pane isn't affiliated with Amazon, Google or any of them.
