@@ -67,10 +67,12 @@ final class LivingSmoke extends GLSurfaceView implements GLSurfaceView.Renderer,
     private int width = 1, height = 1;
     private long frames, drawNanos, heartbeat = SystemClock.uptimeMillis();
     private float lastZoom;
+    private final boolean debuggable;
 
     LivingSmoke(Context c, Listener listener) {
         super(c);
         this.listener = listener;
+        debuggable = (c.getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
         setEGLContextClientVersion(2);
         setEGLConfigChooser(8, 8, 8, 0, 0, 0);
         getHolder().setFixedSize(SURFACE_W, SURFACE_H);
@@ -345,7 +347,7 @@ final class LivingSmoke extends GLSurfaceView implements GLSurfaceView.Renderer,
         drawNanos += System.nanoTime() - began;
         if (++frames == HEARTBEAT_FRAMES) {
             float ms = drawNanos / 1e6f / frames;
-            Log.i(TAG, String.format("%d frames in %.1f s at %dx%d, %.1f ms each", frames, (now - heartbeat) / 1000f, width, height, ms));
+            if (debuggable) Log.i(TAG, String.format("%d frames in %.1f s at %dx%d, %.1f ms each", frames, (now - heartbeat) / 1000f, width, height, ms));
             if (ms > SLOW_FRAME_MS && !judged) post(listener::onTooSlow);
             judged = true;
             frames = 0;

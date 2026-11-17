@@ -3,15 +3,26 @@ name: Release
 on:
   push:
     tags: ['v*']
+  # Called by auto-release.yml with a tag that does not exist yet (created on publish).
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
 
 permissions:
   contents: write
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag && github.sha || github.ref }}
 
       - uses: actions/setup-java@v6
         with:
@@ -24,9 +35,15 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --install "build-tools;35.0.0" "platforms;android-25" > /dev/null
 
+      - name: Check manifest versionName matches the tag
+        run: |
+          name="$(sed -n 's/.*android:versionName="\([^"]*\)".*/\1/p' AndroidManifest.xml)"
+          if [ "$name" != "${TAG#v}" ]; then
+            echo "AndroidManifest versionName ($name) does not match tag $TAG" >&2
+            exit 1
+          fi
+
       - name: Extract release notes from CHANGELOG
-        env:
-          TAG: ${{ github.ref_name }}
         run: |
           ver="${TAG#v}"
           awk -v v="$ver" '
@@ -54,9 +71,8 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
         run: |
           pre=()
           case "$TAG" in *-*) pre=(--prerelease) ;; esac
           gh release create "$TAG" pane.apk pane.apk.sha256 \
-            --title "Pane $TAG" --notes-file notes.md --verify-tag "${pre[@]}"
+            --title "Pane $TAG" --notes-file notes.md --target "$GITHUB_SHA" "${pre[@]}"

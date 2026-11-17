@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
     paths: ["site/**"]
+  # Catches site changes merged by auto-merge, which don't fire push workflows.
+  schedule:
+    - cron: '23 3 * * *'
   workflow_dispatch:
 
 permissions:

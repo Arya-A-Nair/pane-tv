@@ -112,7 +112,7 @@ final class SkyArc extends View {
         // tonight runs from the last sunset to the next sunrise
         long dusk = clock - (now > set ? now - set : now + 24 * 60 - set) * minute;
         long dawn = clock + (now > set ? 24 * 60 - now + rise : rise - now) * minute;
-        String next = "Sunrise " + sunrise;
+        String next = "Sunrise " + Ui.hm(sunrise);
         long[] pass = Double.isNaN(latitude) ? null : MoonPath.pass(dusk, dawn, clock, latitude, longitude);
         if (pass == null) {
             leftTime = sunset;
@@ -127,8 +127,8 @@ final class SkyArc extends View {
         progress = Math.max(0f, Math.min(1f, (clock - pass[0]) / (float) (pass[1] - pass[0])));
         bodyUp = clock >= pass[0] && clock <= pass[1];
         if (bodyUp && moon == null) moon = Moon.render(getContext(), Math.round(22 * dp), Moon.age(clock));
-        if (clock < pass[0]) return new Reading("Moonrise at", leftTime, next);
-        return new Reading(bodyUp ? "Moon sets at" : "Moon set at", rightTime, next);
+        if (clock < pass[0]) return new Reading("Moonrise at", Ui.hm(leftTime), next);
+        return new Reading(bodyUp ? "Moon sets at" : "Moon set at", Ui.hm(rightTime), next);
     }
 
     /** True outside the hours between the two "HH:mm" times. */
@@ -195,8 +195,8 @@ final class SkyArc extends View {
         }
         float baseline = h - 3 * dp;
         time.setTextAlign(Paint.Align.LEFT);
-        c.drawText(leftTime, 0, baseline, time);
+        c.drawText(Ui.hm(leftTime), 0, baseline, time);
         time.setTextAlign(Paint.Align.RIGHT);
-        c.drawText(rightTime, w, baseline, time);
+        c.drawText(Ui.hm(rightTime), w, baseline, time);
     }
 }

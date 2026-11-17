@@ -1,0 +1,26 @@
+name: Auto-merge on owner approval
+
+# When the repo owner approves a PR, turn on squash auto-merge. GitHub then merges it
+# once the required checks (build, lint) pass. No PR code is checked out or run here.
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable:
+    # Fork PRs get a read-only token on pull_request_review, so skip them: the owner
+    # clicks "Enable auto-merge" on those instead (see docs/RELEASING.md).
+    if: >-
+      github.event.review.state == 'approved' &&
+      github.event.review.user.login == github.repository_owner &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR"

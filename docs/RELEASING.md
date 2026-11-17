@@ -1,6 +1,6 @@
 # Releasing Pane
 
-Releases are built by `.github/workflows/release.yml` when a `v*` tag is pushed. It builds with `scripts/ci-build.sh` (same steps as `build.sh`), signs `pane.apk` with your release key, and publishes a GitHub Release with `pane.apk`, `pane.apk.sha256` and the matching CHANGELOG section as notes.
+Releases are automatic: when a PR that raises `versionName` in `AndroidManifest.xml` lands on `main`, `auto-release.yml` sees that no `v<versionName>` tag exists and calls `release.yml` to publish it. Pushing a `v*` tag by hand still works too. `release.yml` builds with `scripts/ci-build.sh` (same steps as `build.sh`), signs `pane.apk` with your release key, and publishes a GitHub Release with `pane.apk`, `pane.apk.sha256` and the matching CHANGELOG section as notes.
 
 ## One-time setup
 
@@ -40,20 +40,24 @@ gh secret set PANE_KEY_PASSWORD --repo Arya-A-Nair/pane-tv
 | `PANE_KEY_ALIAS` | `pane` (the `-alias` above) |
 | `PANE_KEY_PASSWORD` | key password |
 
-## Each release
+## The automated flow, end to end
 
-1. **Bump the version** in `AndroidManifest.xml`, on the `<manifest>` element:
-   `android:versionCode` (integer, must increase every release) and `android:versionName` (for example `1.0.0`, should match the tag).
-2. **Update `CHANGELOG.md`**: move items from `[Unreleased]` into a new `## [1.0.0]` section. The workflow uses that exact section as the release notes and fails if it is missing. The tag `v1.0.0` maps to `## [1.0.0]`.
-3. Commit, then tag and push:
-   ```sh
-   git commit -am "Release 1.0.0"
-   git tag v1.0.0
-   git push origin main v1.0.0
-   ```
-4. Watch the Actions run. A tag with a hyphen (`v1.1.0-rc1`) is published as a pre-release.
+1. **Contributors** open PRs and add a line under `## [Unreleased]` in `CHANGELOG.md` for user-visible changes. They never bump the version.
+2. CI (`build`, `lint`) runs and a bot comments the APK size and download link. See [CONTRIBUTING.md](../CONTRIBUTING.md).
+3. **You review and approve.** `automerge.yml` turns on squash auto-merge when the repo owner approves, and GitHub merges once CI is green. Nothing from an outside contributor is ever merged without your approval; this is deliberate, since a merge ends up in a signed release.
+4. **To release**, open a release PR that:
+   - bumps `android:versionCode` (integer, must increase every release) and `android:versionName` (for example `1.1.0`) on the `<manifest>` element of `AndroidManifest.xml`;
+   - moves the `[Unreleased]` items into a new `## [1.1.0]` section of `CHANGELOG.md` (that section becomes the release notes, and the release fails if it is missing).
+5. When that PR merges, `auto-release.yml` runs, builds with `scripts/ci-build.sh`, signs with your key, and creates the tag `v1.1.0` and the GitHub Release (`pane.apk`, `pane.apk.sha256`). A hyphenated version (`1.1.0-rc1`) is published as a pre-release.
 
-If a run fails after the tag exists, fix the problem, then delete and re-push the tag (`git tag -d v1.0.0 && git push origin :refs/tags/v1.0.0`).
+If the release run fails (for example a missing CHANGELOG section), fix it with a new PR, or re-run the failed run from the Actions tab. The tag is only created on success, so there is nothing to clean up. You can also trigger **Auto release** by hand from the Actions tab. (Pushing a `v*` tag yourself also releases; if that run fails, delete the tag with `git push origin :refs/tags/v1.1.0` and push it again.)
+
+## Things only you can do
+
+- **Approve PRs.** Auto-merge needs your approval; Dependabot PRs get auto-merge turned on by `dependabot-automerge.yml` (patch and minor GitHub Actions bumps only), but Actions cannot approve them, so they also wait for your approval.
+- **Fork PRs:** after approving, click **Enable auto-merge** (or **Squash and merge**). The approval workflow skips forks because GitHub gives workflows a read-only token on `pull_request_review` for them.
+- **Your own PRs** (including release PRs) cannot be approved by you. Once CI is green, merge them as a repo admin using the ruleset bypass (**Merge without waiting for requirements**).
+- The release keystore and the four secrets in setup above.
 
 ## How users get updates
 

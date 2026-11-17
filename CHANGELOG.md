@@ -6,7 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0]
+## [1.1.0] - 2026-11-17
+
+### Added
+- Rearrange Home: Menu on an app opens a small glass sheet with Move left, Move right, Remove from Home and Cancel; tiles slide into place and the order is kept.
+- Hide apps: in Apps, Menu now opens a sheet (Add to or Remove from Home, Hide this app, Cancel). Hidden apps leave Apps and Home and are never pinned automatically; Settings has a "Hidden apps" row to show them again.
+
+### Changed
+- The clock follows the TV's 12/24-hour setting; temperatures show in °F in the US, Liberia and Myanmar.
+- The app is now named Pane (it was "Home") in the launcher and the watcher notification.
+- The installer times out after 10 s on an unreachable TV, refuses to install without a published checksum, and checks the release signing certificate when `apksigner` is installed.
+- Backgrounds captions now read "Colour field" instead of "Original artwork".
+
+## [1.0.0] - 2026-11-17
 
 First public release.
 
@@ -21,3 +33,7 @@ First public release.
 - Automatically adds newly installed apps to the home screen.
 - No ads, no accounts, no tracking.
 - One-command installer for macOS, Linux and Windows.
+
+[Unreleased]: https://github.com/Arya-A-Nair/pane-tv/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Arya-A-Nair/pane-tv/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/Arya-A-Nair/pane-tv/releases/tag/v1.0.0

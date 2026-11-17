@@ -22,15 +22,15 @@ final class Weather {
     private static final long REFRESH_MS = 30 * 60_000L;
     private static final int TIMEOUT_MS = 8000;
 
-    String city = "";
+    volatile String city = "";   // written on the fetch thread, read on the UI thread
     /** Where the reading is for, in degrees; NaN until the first reading. Used to find the moon. */
-    double lat = Double.NaN, lon = Double.NaN;
-    float temp, hi, lo;
-    int code, aqi = -1;
-    String sunrise = "", sunset = "";
-    boolean day = true, ok;
-    float[] hourly = new float[12];
-    int startHour;
+    volatile double lat = Double.NaN, lon = Double.NaN;
+    volatile float temp, hi, lo;
+    volatile int code, aqi = -1;
+    volatile String sunrise = "", sunset = "";
+    volatile boolean day = true, ok;
+    volatile float[] hourly = new float[12];
+    volatile int startHour;
 
     private final SharedPreferences prefs;
     private final Listener listener;
@@ -61,7 +61,7 @@ final class Weather {
             if (!"success".equals(loc.optString("status"))) return;
             String url = String.format(Locale.US, "https://api.open-meteo.com/v1/forecast?latitude=%.3f&longitude=%.3f"
                     + "&current=temperature_2m,weather_code,is_day&hourly=temperature_2m"
-                    + "&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&forecast_days=2&timezone=auto",
+                    + "&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&forecast_days=2&timezone=auto" + (fahrenheit() ? "&temperature_unit=fahrenheit" : ""),
                     loc.getDouble("lat"), loc.getDouble("lon"));
             JSONObject f = new JSONObject(get(url));
             try {
@@ -96,7 +96,15 @@ final class Weather {
         String now = cur.getString("time"); // local ISO, e.g. 2026-11-17T16:00
         startHour = Integer.parseInt(now.substring(11, 13));
         int base = startHour; // hourly array starts at 00:00 today
-        for (int i = 0; i < hourly.length; i++) hourly[i] = (float) t.optDouble(Math.min(base + i, t.length() - 1), temp);
+        float[] h = new float[12];
+        for (int i = 0; i < h.length; i++) h[i] = (float) t.optDouble(Math.min(base + i, t.length() - 1), temp);
+        hourly = h;
+    }
+
+    /** US, Liberia and Myanmar read temperatures in °F; everywhere else °C. */
+    private static boolean fahrenheit() {
+        String c = Locale.getDefault().getCountry();
+        return c.equals("US") || c.equals("LR") || c.equals("MM");
     }
 
     // ---- air quality (US AQI), in six steps from good to hazardous

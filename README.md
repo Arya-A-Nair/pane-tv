@@ -23,7 +23,7 @@ Pane replaces it with something calm: your apps, the time, the sky outside, and 
 
 ## See it move
 
-<a href="https://github.com/Arya-A-Nair/pane-tv/releases/download/v1.0.0/pane-launch.mp4"><img src="docs/media/poster.jpg" alt="Watch the 44-second launch film" width="100%"></a>
+https://github.com/user-attachments/assets/8427675f-b959-4dcb-a98f-8ce6dfe07d4c
 
 <img src="docs/media/colour-spread.gif" alt="Moving between apps: the new app's colour spreads through the smoke like dye" width="100%">
 
@@ -53,7 +53,7 @@ Pane replaces it with something calm: your apps, the time, the sky outside, and 
     <td><img src="docs/media/settings.jpg" alt="Settings, including one-tap Fire TV settings"></td>
   </tr>
   <tr>
-    <td><b>Every app, one page away.</b> Pin or unpin with the menu button.</td>
+    <td><b>Every app, one page away.</b> Pin, move or hide apps with the menu button.</td>
     <td><b>Fire TV settings stay one press away.</b> Pane never hides the system: display, sound and remotes are always reachable.</td>
   </tr>
 </table>
@@ -86,7 +86,7 @@ powershell -ExecutionPolicy Bypass -File .\pane-install.ps1 192.168.1.20
 
 That's it. Press Home on your remote and Pane appears. (Amazon briefly holds the Home button for a few seconds before Pane takes over; Pane shows a calm screen instead of Amazon's ads while it waits.)
 
-The installer downloads the latest signed release, checks its checksum, installs it, and grants the two permissions Pane needs. It's safe to run again to update.
+The installer downloads the latest signed release, checks its checksum, installs it, and grants the permissions Pane needs and keeps its watcher from being put to sleep. It's safe to run again to update.
 
 ### Google TV / Android TV
 
@@ -110,9 +110,8 @@ The design language is documented in [DESIGN.md](DESIGN.md).
 
 ## Requirements
 
-- Fire TV (Fire OS 6 or newer) or Android TV / Google TV running Android 5.1 or newer.
 - For the Fire TV setup: a computer on the same Wi-Fi with [adb](https://developer.android.com/tools/releases/platform-tools) (the installer tells you how to get it).
-- Tested on a Fire TV Stick 4K (2018). Other devices should work; please [report how it goes](https://github.com/Arya-A-Nair/pane-tv/issues/new/choose).
+- Tested on Fire TV Stick 4K (2018, Fire OS 6). Other Fire TV and Android/Google TV devices should work but are unverified; [reports welcome](https://github.com/Arya-A-Nair/pane-tv/issues/new/choose).
 
 ## Privacy
 
@@ -124,14 +123,14 @@ Pane has no accounts, no analytics and no ads. The only network requests are for
 ./build.sh                 # needs JDK 17+, Android build-tools 35 and platform 25
 PANE_TV=192.168.1.20 ./deploy.sh
 ```
-See [CONTRIBUTING.md](CONTRIBUTING.md) for a map of the code, how to test without a TV and what's most useful to work on. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md). Releases are built and signed by GitHub Actions; see [docs/RELEASING.md](docs/RELEASING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) (AI agents: [AGENTS.md](AGENTS.md)) for a map of the code, how to test without a TV and what's most useful to work on. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md). Releases are built and signed by GitHub Actions; see [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Credits
 
 - Earth and Moon imagery: NASA (public domain), including the Artemis II "Earthset" and International Space Station photography.
 - Moon surface map: NASA Lunar Reconnaissance Orbiter (public domain).
 - Weather and air quality: [Open-Meteo](https://open-meteo.com) (CC BY 4.0). Location: [ip-api.com](https://ip-api.com).
-- Fonts: [Manrope](https://github.com/sharanda/manrope), [Inter](https://rsms.me/inter/) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (SIL Open Font License).
+- Fonts: [Manrope](https://fonts.google.com/specimen/Manrope), [Inter](https://rsms.me/inter/) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (SIL Open Font License).
 
 App names and icons shown in screenshots belong to their owners. Pane isn't affiliated with Amazon, Google or any of them.
 

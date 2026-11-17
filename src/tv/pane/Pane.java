@@ -30,6 +30,8 @@ public class Pane extends Activity {
     static final String[] PAGE_NAMES = {"Home", "Apps", "Today", "Backgrounds", "Settings"};
     // Indices into PAGE_NAMES and the pages array. TODAY and BACKGROUNDS are only reached through the bar.
     static final int HOME = 0, APPS = 1, TODAY = 2, BACKGROUNDS = 3, SETTINGS = 4;
+    /** The list of hidden apps: a sixth page reached from Settings, with no place of its own in the bar (Settings stays lit). */
+    static final int HIDDEN = 5;
 
     Ui ui;
     Apps apps;
@@ -40,7 +42,8 @@ public class Pane extends Activity {
     private FrameLayout root, stage, launchLayer;
     private Page[] pages;
     private HomePage home;
-    private AppsPage appsPage;
+    private AppsPage appsPage, hiddenPage;
+    private ActionSheet sheet;
     private BottomBar bar;
     private Screensaver screensaver;
     private final Handler handler = new Handler();
@@ -74,8 +77,9 @@ public class Pane extends Activity {
         room = new Room(root, stage);
         root.addView(stage, Ui.fill());
         home = new HomePage(this);
-        appsPage = new AppsPage(this);
-        pages = new Page[]{home, appsPage, new TodayPage(this), new BackgroundsPage(this), new SettingsPage(this)};
+        appsPage = new AppsPage(this, false);
+        hiddenPage = new AppsPage(this, true);
+        pages = new Page[]{home, appsPage, new TodayPage(this), new BackgroundsPage(this), new SettingsPage(this), hiddenPage};
         for (Page p : pages) stage.addView(p.view, Ui.fill());
         bar = new BottomBar(ui, PAGE_NAMES);
         FrameLayout.LayoutParams bl = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
@@ -102,15 +106,17 @@ public class Pane extends Activity {
             pages[i].view.setVisibility(i == page ? View.VISIBLE : View.GONE);
             pages[i].focus(i == page && !onBar, animate);
         }
-        bar.show(page, onBar, animate);
+        bar.show(Math.min(page, SETTINGS), onBar, animate);
         room.relight(page == HOME && !idle ? home.accent() : null, animate);
         room.watch(page == HOME || idle);
     }
 
     private void show(int target) {
         if (target == page) return;
+        closeSheet();
         page = target;
         if (page == APPS) appsPage.fill();   // pick up what was added to or taken off Home
+        if (page == HIDDEN) hiddenPage.fill();
         showFocus(true);
         room.dim(page != HOME, Motion.ms(450));
         pages[page].enter();
@@ -118,13 +124,14 @@ public class Pane extends Activity {
 
     /** Go to a page and put focus in it. */
     void open(int target) {
-        barItem = target;
+        barItem = Math.min(target, SETTINGS);
         onBar = !pages[target].selectable();
         show(target);
         showFocus(true);
     }
 
     private void goHome() {
+        closeSheet();
         onBar = false;
         barItem = HOME;
         home.focusLastWatched();
@@ -143,6 +150,24 @@ public class Pane extends Activity {
         room.use(index, origin, () -> showFocus(true));
     }
 
+    /** A small glass sheet of actions beside this tile; labels[i] runs actions[i] (null just closes it). */
+    void openSheet(AppTile anchor, String title, String[] labels, Runnable[] actions) {
+        closeSheet();
+        sheet = new ActionSheet(this, stage, anchor, title, labels, actions);
+    }
+
+    void closeSheet() {
+        if (sheet == null) return;
+        sheet.dismiss();
+        sheet = null;
+    }
+
+    void sheetPicked(Runnable action) {
+        closeSheet();
+        if (action != null) action.run();
+        showFocus(true);
+    }
+
     private void refreshPages() { for (Page p : pages) p.refresh(); }
 
     // ---------------------------------------------------------------- the remote
@@ -155,17 +180,18 @@ public class Pane extends Activity {
         int k = e.getKeyCode();
         if (k == KeyEvent.KEYCODE_ENTER || k == KeyEvent.KEYCODE_BUTTON_A) k = KeyEvent.KEYCODE_DPAD_CENTER;
 
-        if (k == KeyEvent.KEYCODE_BACK) goHome();
+        if (sheet != null) sheet.key(k);
+        else if (k == KeyEvent.KEYCODE_BACK) goHome();
         else if (onBar) {
             boolean left = k == KeyEvent.KEYCODE_DPAD_LEFT, right = k == KeyEvent.KEYCODE_DPAD_RIGHT;
-            if ((left && barItem == 0) || (right && barItem == pages.length - 1)) Motion.nudge(bar.view, ui.px(left ? -6 : 6), 0);
+            if ((left && barItem == 0) || (right && barItem == PAGE_NAMES.length - 1)) Motion.nudge(bar.view, ui.px(left ? -6 : 6), 0);
             else if (left) barItem--;
             else if (right) barItem++;
             else if (k == KeyEvent.KEYCODE_DPAD_UP || k == KeyEvent.KEYCODE_DPAD_CENTER) onBar = !pages[barItem].selectable();
             else if (k == KeyEvent.KEYCODE_MENU) { open(SETTINGS); return true; }
             show(barItem);   // pages follow the bar, like tabs
         } else if (!pages[page].key(k)) {
-            if (k == KeyEvent.KEYCODE_DPAD_DOWN) { onBar = true; barItem = page; }
+            if (k == KeyEvent.KEYCODE_DPAD_DOWN) { onBar = true; barItem = Math.min(page, SETTINGS); }
             else if (k == KeyEvent.KEYCODE_MENU) { open(SETTINGS); return true; }
         }
         if (!launching) showFocus(true);
@@ -353,6 +379,7 @@ public class Pane extends Activity {
                 if (Intent.ACTION_PACKAGE_ADDED.equals(i.getAction()) && !i.getBooleanExtra(Intent.EXTRA_REPLACING, false) && pkg != null) apps.autoPin(pkg);
                 home.fillRow();
                 appsPage.fill();
+                hiddenPage.fill();
                 refreshPages();
                 showFocus(false);
             }

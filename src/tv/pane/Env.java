@@ -16,7 +16,7 @@ import java.io.InputStream;
 final class Env {
     static final String[] IDS = {"nocturne", "tide", "ember", "dune", "orchid", "graphite", "earthset", "sunrise", "aurora", "marble"};
     static final String[] NAMES = {"Nocturne", "Tide", "Ember", "Dune", "Orchid", "Graphite", "Earthset", "Orbital sunrise", "Aurora", "Blue Marble"};
-    static final String[] CREDITS = {"Original artwork", "Original artwork", "Original artwork", "Original artwork", "Original artwork", "Original artwork",
+    static final String[] CREDITS = {"Colour field", "Colour field", "Colour field", "Colour field", "Colour field", "Colour field",
             "Photograph: Artemis II, NASA", "Photograph: International Space Station, NASA", "Photograph: International Space Station, NASA", "Photograph: NASA"};
 
     static Bitmap photo, frost;   // frost is small; glass scales it up to screen size

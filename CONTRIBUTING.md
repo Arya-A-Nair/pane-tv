@@ -2,7 +2,7 @@
 
 Thanks for helping. Pane is intentionally small, so please keep changes small too.
 
-Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md). Using an AI coding agent? Point it at [AGENTS.md](AGENTS.md), the agent-friendly version of this guide.
 
 ## Good first contributions
 
@@ -63,9 +63,19 @@ JAVAC_FLAGS="-Xlint:all,-options -Werror" ./build.sh && java -cp out/classes tv.
 
 A code-owner review is also required on `main`.
 
+### What happens after you open a PR
+
+1. CI runs `build` and `lint`, and a bot posts one comment with the APK size and a link to the run's `pane-apk` artifact.
+2. The owner reviews. **Nothing is ever merged without a human approval**; untrusted code is never auto-merged.
+3. When the owner approves, squash auto-merge is switched on and the PR merges itself as soon as CI is green (for PRs from forks the owner clicks **Enable auto-merge** instead, because GitHub gives workflows a read-only token there). The branch is deleted afterwards.
+4. Dependabot updates to GitHub Actions (patch and minor) are approved and auto-merged by a workflow once CI passes.
+5. If the merge bumps the version in `AndroidManifest.xml`, a signed release is published automatically; see [docs/RELEASING.md](docs/RELEASING.md). Edits to `site/` deploy to GitHub Pages on merge.
+
+Contributors: add a line under `[Unreleased]` in `CHANGELOG.md` for user-visible changes, and do not bump the version yourself; the owner's release PR does that.
+
 ### Testing a PR build
 
-CI uploads each PR's APK as the `pane-apk` artifact (kept 14 days). Download it from the run's summary page, unzip, then:
+CI uploads each PR's APK as the `pane-apk` artifact (kept 14 days). Download it from the link in the bot's PR comment (or the run's summary page), unzip, then:
 
 ```sh
 adb connect <tv-ip>
