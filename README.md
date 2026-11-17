@@ -23,7 +23,7 @@ Pane replaces it with something calm: your apps, the time, the sky outside, and 
 
 ## See it move
 
-<a href="https://github.com/Arya-A-Nair/pane-tv/releases/download/v1.0.0/pane-launch.mp4"><img src="docs/media/poster.jpg" alt="Watch the 44-second launch film" width="100%"></a>
+https://github.com/user-attachments/assets/8427675f-b959-4dcb-a98f-8ce6dfe07d4c
 
 <img src="docs/media/colour-spread.gif" alt="Moving between apps: the new app's colour spreads through the smoke like dye" width="100%">
 
