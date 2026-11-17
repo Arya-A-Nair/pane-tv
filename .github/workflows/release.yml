@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: sdkmanager "build-tools;35.0.0" "platforms;android-25"
+
+      - name: Extract release notes from CHANGELOG
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          ver="${TAG#v}"
+          awk -v v="$ver" '
+            /^## \[/ { if (on) exit; on = index($0, "[" v "]") > 0; next }
+            on
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "No CHANGELOG.md section found for [$ver]" >&2
+            exit 1
+          fi
+
+      - name: Build and sign
+        env:
+          PANE_KEYSTORE_BASE64: ${{ secrets.PANE_KEYSTORE_BASE64 }}
+          PANE_KEYSTORE_PASSWORD: ${{ secrets.PANE_KEYSTORE_PASSWORD }}
+          PANE_KEY_ALIAS: ${{ secrets.PANE_KEY_ALIAS }}
+          PANE_KEY_PASSWORD: ${{ secrets.PANE_KEY_PASSWORD }}
+        run: |
+          echo "$PANE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/pane.keystore"
+          PANE_KEYSTORE="$RUNNER_TEMP/pane.keystore" ./scripts/ci-build.sh
+          rm -f "$RUNNER_TEMP/pane.keystore"
+          sha256sum pane.apk > pane.apk.sha256
+          cat pane.apk.sha256
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          pre=()
+          case "$TAG" in *-*) pre=(--prerelease) ;; esac
+          gh release create "$TAG" pane.apk pane.apk.sha256 \
+            --title "Pane $TAG" --notes-file notes.md --verify-tag "${pre[@]}"

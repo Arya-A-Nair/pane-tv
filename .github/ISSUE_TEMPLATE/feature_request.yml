@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest an improvement to Pane
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like Pane to do?
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device model
+      placeholder: Fire TV Stick 4K Max, Google TV Streamer, ...
+  - type: input
+    id: os
+    attributes:
+      label: Fire OS / Android version
+  - type: input
+    id: version
+    attributes:
+      label: Pane version
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot or mockup (optional)

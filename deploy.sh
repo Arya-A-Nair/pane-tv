@@ -1,14 +1,9 @@
 #!/bin/sh
-# Install NOVA on the Fire TV and enable the Home redirect. Safe to re-run.
-# Usage: ./deploy.sh [serial]        undo: adb uninstall tv.nova
+# Install the locally built nova.apk on a TV (dev). Safe to re-run.
+# Usage: PANE_TV=192.168.1.16:5555 ./deploy.sh     or     ./deploy.sh 192.168.1.16:5555
+# undo: adb uninstall tv.nova
 set -e
-S=${1:-192.168.1.16:5555}
-A="adb -s $S"
 cd "$(dirname "$0")"
-$A install -r nova.apk >/dev/null
-$A shell pm grant tv.nova android.permission.READ_LOGS
-$A shell appops set tv.nova SYSTEM_ALERT_WINDOW allow
-$A shell dumpsys deviceidle whitelist +tv.nova >/dev/null
-$A shell pm list packages | grep -q tv.homeredirect && $A uninstall tv.homeredirect >/dev/null || true  # superseded
-$A shell am start -n tv.nova/.Nova >/dev/null
-echo "NOVA deployed"
+S=${1:-$PANE_TV}
+[ -n "$S" ] || { echo "usage: $0 TV_IP[:PORT]   (or set PANE_TV)" >&2; exit 2; }
+exec install/pane-install.sh --apk nova.apk "$S"
