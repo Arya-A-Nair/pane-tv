@@ -1,7 +1,8 @@
 """Makes every environment in assets/env (see DESIGN.md, "Environment").
 
 Six are original artwork: volumetric smoke, lit from a 'light well' in the upper right.
-Four are NASA photographs (public domain), cropped to 1920 x 1080 in tools/photographs.
+Four are NASA photographs (public domain), cropped to 3840 x 2160 in tools/photographs
+(tools/photographs/fetch.py re-makes the crops from the NASA originals).
 All ten get the same grade: luminance is soft-capped wherever Home sets text straight on
 the picture, which is what keeps that text readable.
 
@@ -11,7 +12,8 @@ Needs numpy and Pillow.
 """
 import os, sys, numpy as np
 from PIL import Image
-W, H = 1920, 1080
+W, H = 3840, 2160
+SC = W / 1920  # pixel distances below were tuned at 1920 x 1080
 yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
 u, v = xx / W, yy / H
 
@@ -42,6 +44,7 @@ def srgb(l):
 
 def lum(rgb): return rgb[..., 0] * 0.2126 + rgb[..., 1] * 0.7152 + rgb[..., 2] * 0.0722
 
+Q = 88                 # JPEG quality of the shipped backgrounds (APK size)
 LIGHT = (0.77, 0.26)   # where the light sits, in screen fractions
 SPOT = None            # optional bright spot for a photograph: (cx, cy, rx, ry, fade, keep_zone)
 def ss(x, a, b):
@@ -66,7 +69,7 @@ def grade(rgb, lo=0.085, hi=0.42):
 def finish(rgb, path, seed=1):
     rng = np.random.default_rng(seed)
     s = srgb(rgb) * 255 + rng.normal(0, 1.1, (H, W, 1)).astype(np.float32)  # film grain, kills banding
-    Image.fromarray(np.clip(s + 0.5, 0, 255).astype(np.uint8)).save(path, quality=95, subsampling=0)
+    Image.fromarray(np.clip(s + 0.5, 0, 255).astype(np.uint8)).save(path, quality=Q, subsampling=0)
 
 def soft(a, k):
     """Cheap wide blur: down and back up with bicubic."""
@@ -77,15 +80,15 @@ def smoke(seed, shadow, mid, hi, key):
     rng = np.random.default_rng(seed)
     wx, wy = fbm(rng, 2, 2, 3) - .5, fbm(rng, 2, 2, 3) - .5
     fx, fy = fbm(rng, 5, 3, 3) - .5, fbm(rng, 5, 3, 3) - .5
-    far = sample(fbm(rng, 3, 2, 4, 0.5), xx + 520 * wx, yy + 340 * wy)        # slow body of the cloud
-    near = sample(fbm(rng, 7, 5, 6, 0.56), xx + 620 * wx + 150 * fx, yy + 400 * wy + 120 * fy)  # wisps
+    far = sample(fbm(rng, 3, 2, 4, 0.5), xx + 520 * SC * wx, yy + 340 * SC * wy)        # slow body of the cloud
+    near = sample(fbm(rng, 7, 5, 6, 0.56), xx + 620 * SC * wx + 150 * SC * fx, yy + 400 * SC * wy + 120 * SC * fy)  # wisps
     far = (far - far.min()) / (far.max() - far.min()); near = (near - near.min()) / (near.max() - near.min())
     # the cloud lives on a diagonal from the light well down to the lower left, and thins out away from it
     cx, cy = LIGHT
     band = np.exp(-(((v - cy) - 0.55 * (cx - u)) ** 2) / 0.085) * (0.35 + 0.65 * ss(u, 0.0, 0.8))
     body = ss(far, 0.30, 0.85)
     d = np.clip(body * (0.45 + 0.75 * ss(near, 0.25, 0.8)) * (0.25 + 0.95 * band), 0, 1)
-    d = np.clip(0.75 * d + 0.25 * soft(d, 24), 0, 1)                                          # scatter: soft halo round the wisps
+    d = np.clip(0.75 * d + 0.25 * soft(d, int(24 * SC)), 0, 1)                                          # scatter: soft halo round the wisps
     r2 = ((u - cx) * 16 / 9) ** 2 + (v - cy) ** 2
     light = np.exp(-r2 / 0.22)
     core = np.exp(-r2 / 0.03)
@@ -107,7 +110,9 @@ STILLS = {
 def photo(src, out, seed, spot=None, hi=0.42):
     global SPOT
     SPOT = spot
-    a = np.asarray(src.convert('RGB'), np.float32) / 255
+    src = src.convert('RGB')
+    if src.size != (W, H): src = src.resize((W, H), Image.LANCZOS)
+    a = np.asarray(src, np.float32) / 255
     a = np.where(a <= 0.04045, a / 12.92, ((a + 0.055) / 1.055) ** 2.4)
     finish(grade(a, 0.085, hi), out, seed); SPOT = None
 
@@ -116,8 +121,9 @@ def photos(src, out):
     photo(Image.open(f'{src}/sunrise.jpg'), f'{out}/sunrise.jpg', 2, (0.80, 0.10, 0.22, 0.24, 2.4, False), 0.5)
     photo(Image.open(f'{src}/aurora.jpg'), f'{out}/aurora.jpg', 3)
     # the whole Earth, set large in the upper right so it rises out of the light well
-    e = Image.open(f'{src}/blue-marble.jpg').convert('RGB').resize((1220, 1220), Image.LANCZOS)
-    c = Image.new('RGB', (W, H)); c.paste(e, (1470 - 610, 330 - 610))
+    d = int(1220 * SC)
+    e = Image.open(f'{src}/blue-marble.jpg').convert('RGB').resize((d, d), Image.LANCZOS)
+    c = Image.new('RGB', (W, H)); c.paste(e, (int(1470 * SC) - d // 2, int(330 * SC) - d // 2))
     photo(c, f'{out}/marble.jpg', 4)
 
 if __name__ == '__main__':
