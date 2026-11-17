@@ -57,6 +57,7 @@ public class Nova extends Activity {
     private Leader leader;
     private TextView time, date, moonName, moonNext, wCity, wTemp, wSky, wLine, wAir, hint, focusName, focusMeta;
     private ImageView moonView;
+    private SunArc sunArc;
     private View pin;
 
     // orbit
@@ -109,6 +110,21 @@ public class Nova extends Activity {
         buildPlaying();
         drawer = new Drawer();
         controls = new Controls();
+        // installs and removals show up at once; a new app joins the orbit by itself
+        android.content.IntentFilter pf = new android.content.IntentFilter();
+        pf.addAction(Intent.ACTION_PACKAGE_ADDED);
+        pf.addAction(Intent.ACTION_PACKAGE_REMOVED);
+        pf.addAction(Intent.ACTION_PACKAGE_CHANGED);
+        pf.addDataScheme("package");
+        registerReceiver(new android.content.BroadcastReceiver() {
+            @Override public void onReceive(android.content.Context c, Intent i) {
+                boolean replacing = i.getBooleanExtra(Intent.EXTRA_REPLACING, false);
+                String pkg = i.getData() == null ? null : i.getData().getSchemeSpecificPart();
+                apps = new Apps(Nova.this);
+                if (Intent.ACTION_PACKAGE_ADDED.equals(i.getAction()) && !replacing && pkg != null) apps.autoPin(pkg);
+                syncOrbit();
+            }
+        }, pf);
         weather = new Weather(this, new Weather.Listener() { public void onWeather(Weather w) { showWeather(); } });
         showWeather();
         tick.run();
@@ -117,6 +133,13 @@ public class Nova extends Activity {
     // ================================================================== planet
 
     private void buildPlanet() {
+        final ImageView starfield = new ImageView(this);
+        sky.addView(starfield, match());
+        root.post(new Runnable() { public void run() {
+            starfield.setImageBitmap(Earth.stars(root.getWidth(), root.getHeight(), dp));
+            starfield.setAlpha(0f);
+            starfield.animate().alpha(1f).setDuration(2500).start();
+        } });
         planet = new ImageView(this);
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(px(PLANET), px(PLANET));
         lp.leftMargin = px(PLANET_CX - PLANET / 2);
@@ -205,15 +228,21 @@ public class Nova extends Activity {
         place(sky, date, 49, 96);
 
         moonView = new ImageView(this);
-        FrameLayout.LayoutParams ml = new FrameLayout.LayoutParams(px(42), px(42));
-        ml.leftMargin = px(392);
-        ml.topMargin = px(34);
+        FrameLayout.LayoutParams ml = new FrameLayout.LayoutParams(px(58), px(58));
+        ml.leftMargin = px(384);
+        ml.topMargin = px(28);
         sky.addView(moonView, ml);
         moonName = text(inter, 11.5f, PORCELAIN, 0.85f);
-        place(sky, moonName, 446, 37);
+        place(sky, moonName, 456, 35);
         moonNext = text(inter, 10.5f, PORCELAIN, 0.5f);
-        place(sky, moonNext, 446, 54);
+        place(sky, moonNext, 456, 53);
 
+
+        // today's daylight, top right
+        sunArc = new SunArc(this, dp, manropeL, inter);
+        FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(px(250), px(112), Gravity.TOP | Gravity.END);
+        sl.setMargins(0, px(30), px(46), 0);
+        sky.addView(sunArc, sl);
 
         // weather lives on the right, wired to the city on the globe
         wCity = text(inter, 11.5f, PORCELAIN, 0.6f);
@@ -244,8 +273,8 @@ public class Nova extends Activity {
         wSky.setText(weather.describe());
         String line = "";
         if (weather.tonight != 0) line = (weather.tonight < weather.temp ? "Cooling to " : "Warming to ") + Math.round(weather.tonight) + "° by midnight.";
-        if (!weather.sunset.isEmpty()) line += (line.isEmpty() ? "" : " ") + "Sunset at " + weather.sunset + ".";
         wLine.setText(line);
+        sunArc.set(weather.sunrise, weather.sunset);
         String air = weather.airAdvice();
         wAir.setText(air == null ? "" : air);
         wAir.setTextColor(weather.aqi > 100 ? WARN : PORCELAIN);
@@ -526,6 +555,7 @@ public class Nova extends Activity {
             time.setText(new SimpleDateFormat("HH:mm", Locale.getDefault()).format(c.getTime()));
             date.setText(new SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(c.getTime()));
             long now = System.currentTimeMillis();
+            if (c.get(Calendar.SECOND) == 0) sunArc.invalidate();
             if (c.get(Calendar.SECOND) == 0 || moonView.getDrawable() == null) updateMoon(now);
             if (c.get(Calendar.SECOND) % 2 == 0) refreshPlaying();
             long idle = SystemClock.uptimeMillis() - lastInput;
@@ -537,13 +567,14 @@ public class Nova extends Activity {
     private void updateMoon(long now) {
         double age = Earth.moonAge(now);
         if (moonView.getDrawable() == null || ((int) (age * 4)) != (moonView.getTag() instanceof Integer ? (Integer) moonView.getTag() : -1)) {
-            moonView.setImageBitmap(Earth.moon(px(42), age));
+            moonView.setImageBitmap(Earth.moon(this, px(58), age));
             moonView.setTag((int) (age * 4));
         }
         moonName.setText(Earth.moonName(age) + " moon");
         double toFull = ((14.765 - age) % 29.530588853 + 29.530588853) % 29.530588853;
         String full = new SimpleDateFormat("d MMMM", Locale.getDefault()).format(now + (long) (toFull * 86400000L));
-        moonNext.setText(toFull < 0.6 ? "Full tonight" : "Full on " + full);
+        String lit = Math.round(Earth.moonLit(age) * 100) + "% lit";
+        moonNext.setText(lit + "  \u00b7  " + (toFull < 0.6 ? "Full tonight" : "Full on " + full));
     }
 
     /** Idle: the orbit and the words fall away; the planet rises and fills the screen. */
@@ -698,6 +729,7 @@ public class Nova extends Activity {
                     Card c = cards.get(sel);
                     apps.toggleFavourite(c.app);
                     c.marked = apps.isFavourite(c.app);
+                    apps.markUnpinned(c.app, !c.marked);
                     c.invalidate();
                     return true;
                 }
@@ -710,7 +742,7 @@ public class Nova extends Activity {
     private void syncOrbit() {
         List<Apps.App> f = apps.favourites();
         boolean same = f.size() == sats.size();
-        for (int i = 0; same && i < f.size(); i++) same = f.get(i) == sats.get(i).app;
+        for (int i = 0; same && i < f.size(); i++) same = f.get(i).pkg.equals(sats.get(i).app.pkg);
         if (same) return;
         for (Card c : sats) orbit.removeView(c);
         sats.clear();
@@ -767,6 +799,14 @@ public class Nova extends Activity {
             head.setPadding(px(16), 0, 0, px(16));
             panel.addView(head);
             add("Show Earth now", null, new Runnable() { public void run() { close(); ui.postDelayed(new Runnable() { public void run() { enterAmbient(); } }, 350); } });
+            add("Fire TV settings", null, new Runnable() { public void run() {
+                // Amazon's own full settings (display, sound, remotes, everything): the way out NOVA must never hide
+                String[] targets = {"com.amazon.tv.launcher/.ui.MainSettingsActivity", "com.amazon.tv.launcher/.util.QuickSettingsProxyActivity"};
+                for (String t : targets) {
+                    try { startActivity(new Intent().setComponent(android.content.ComponentName.unflattenFromString(t)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); close(); return; }
+                    catch (Exception ignored) { }
+                }
+            } });
             add("Show Earth after", new Value() { public String get() { int m = prefs.getInt("ambientMin", 3); return m + (m == 1 ? " minute" : " minutes"); } },
                     new Runnable() { public void run() { int[] o = {1, 3, 5, 10, 20}; int cur = prefs.getInt("ambientMin", 3), n = o[0];
                         for (int i = 0; i < o.length; i++) if (o[i] == cur) n = o[(i + 1) % o.length]; prefs.edit().putInt("ambientMin", n).apply(); } });

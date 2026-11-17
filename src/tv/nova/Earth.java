@@ -112,6 +112,9 @@ final class Earth {
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         double[] ss = subSolar(utcMillis), sun = vec(ss[0], ss[1]);
         float R = size / 2f * 0.93f, C = size / 2f, dot = Math.max(1f, size / 1210f);
+        // the night-side body: opaque, so the starfield never shows through the planet
+        p.setColor(0xff07080b);
+        c.drawCircle(C, C, R + dot, p);
         for (int i = 0; i < count; i++) {
             double[] pr = project(px[i], py[i], pz[i]);
             double dep = pr[0];
@@ -137,11 +140,53 @@ final class Earth {
             p.setColor(((int) (Math.min(1f, a) * 255) << 24) | rgb);
             c.drawCircle(X, Y, rad, p);
         }
-        // atmosphere: a single hairline at the limb
+        // atmosphere: lit by the real sun. Cool white along the daylit edge, amber where it meets night.
+        double[] sv = project(sun[0], sun[1], sun[2]);              // {toward viewer, screen x, screen up}
+        double sl = Math.sqrt(sv[1] * sv[1] + sv[2] * sv[2]) + 1e-6;
         p.setStyle(Paint.Style.STROKE);
-        p.setStrokeWidth(Math.max(1f, size / 900f));
-        p.setColor(0x1aa4b8ee);
-        c.drawCircle(C, C, R + 2 * dot, p);
+        p.setStrokeCap(Paint.Cap.BUTT);
+        android.graphics.RectF ring = new android.graphics.RectF();
+        for (int deg = 0; deg < 360; deg++) {
+            double t = Math.toRadians(deg);
+            double facing = (Math.cos(t) * sv[1] + Math.sin(t) * sv[2]) / sl; // 1 = edge toward the sun
+            double lit = Math.max(0, facing) * (0.55 + 0.45 * Math.max(0, -sv[0] + 0.6)); // brighter when backlit
+            if (lit < 0.02) continue;
+            double warm = Math.max(0, 1 - Math.abs(facing - 0.15) / 0.35);  // near the terminator
+            int col = mix(0xbcd0ff, 0xf0a060, (float) Math.min(1, warm));
+            float start = -deg - 0.6f; // canvas angles run clockwise from +x; ours counter-clockwise
+            for (int k = 0; k < 3; k++) {
+                float rr = R + dot * (1.5f + k * 3.2f), wdt = dot * (1.6f + k * 3f);
+                ring.set(C - rr, C - rr, C + rr, C + rr);
+                p.setStrokeWidth(wdt);
+                p.setColor(((int) (255 * Math.min(1, lit * (k == 0 ? 0.95 : k == 1 ? 0.38 : 0.14))) << 24) | col);
+                c.drawArc(ring, start, 1.2f, false, p);
+            }
+        }
+        return b;
+    }
+
+    private static int mix(int a, int b, float t) {
+        int r = (int) (((a >> 16) & 255) + (((b >> 16) & 255) - ((a >> 16) & 255)) * t);
+        int g = (int) (((a >> 8) & 255) + (((b >> 8) & 255) - ((a >> 8) & 255)) * t);
+        int bl = (int) ((a & 255) + ((b & 255) - (a & 255)) * t);
+        return (r << 16) | (g << 8) | bl;
+    }
+
+    /** A fixed, faint field of stars for the sky around the planet. */
+    static Bitmap stars(int w, int h, float dp) {
+        Bitmap b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(b);
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        java.util.Random r = new java.util.Random(1977);
+        for (int i = 0; i < 260; i++) {
+            float x = r.nextFloat() * w, y = r.nextFloat() * h;
+            float m = r.nextFloat();
+            float size = dp * (m > 0.97f ? 1.3f : m > 0.85f ? 0.9f : 0.55f);
+            int a = (int) (255 * (0.12f + 0.5f * m * m));
+            int col = r.nextFloat() < 0.12f ? 0xffd2b0 : r.nextFloat() < 0.2f ? 0xc8d6ff : 0xe9ecf2;
+            p.setColor((a << 24) | col);
+            c.drawCircle(x, y, size, p);
+        }
         return b;
     }
 
@@ -157,32 +202,42 @@ final class Earth {
         return n[(int) Math.floor(age / 29.530588853 * 8 + 0.5) % 8];
     }
 
-    /** The moon at its current phase, as seen from the northern hemisphere. */
-    static Bitmap moon(int size, double age) {
+    /**
+     * The moon at its current phase, from NASA's LRO surface map (public domain): near side
+     * facing us, lit by a sun whose angle follows the synodic month, faint earthshine on the dark side.
+     */
+    static Bitmap moon(Context ctx, int size, double age) {
         Bitmap b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-        double syn = 29.530588853, f = age / syn;           // 0 new, .5 full
-        double lit = (1 - Math.cos(2 * Math.PI * f)) / 2;   // illuminated fraction
-        boolean waxing = f < 0.5;
-        float C = size / 2f, R = size / 2f - 1;
-        java.util.Random rnd = new java.util.Random(7);
-        float[][] craters = new float[60][3];
-        for (float[] cr : craters) { cr[0] = (rnd.nextFloat() * 2 - 1) * R; cr[1] = (rnd.nextFloat() * 2 - 1) * R; cr[2] = R * (rnd.nextFloat() < .15f ? .12f + rnd.nextFloat() * .14f : .02f + rnd.nextFloat() * .05f); }
-        double xt = 1 - 2 * lit;
+        Bitmap map;
+        try { map = BitmapFactory.decodeStream(ctx.getAssets().open("earth/moon.jpg")); } catch (Exception e) { return b; }
+        int mw = map.getWidth(), mh = map.getHeight();
+        int[] tex = new int[mw * mh];
+        map.getPixels(tex, 0, mw, 0, 0, mw, mh);
+        map.recycle();
+        double phi = 2 * Math.PI * age / 29.530588853;
+        double sx = Math.sin(phi), sz = -Math.cos(phi);       // first quarter: sun from the right
+        float C = size / 2f, R = size / 2f - 0.5f;
+        int[] out = new int[size * size];
         for (int y = 0; y < size; y++)
             for (int x = 0; x < size; x++) {
-                double nx = (x - C) / R, ny = (y - C) / R, rr = nx * nx + ny * ny;
+                double nx = (x + 0.5 - C) / R, ny = (y + 0.5 - C) / R, rr = nx * nx + ny * ny;
                 if (rr > 1) continue;
-                double sx = waxing ? nx : -nx, edge = xt * Math.sqrt(Math.max(0, 1 - ny * ny));
-                double l = Math.max(0, Math.min(1, (sx - edge) * size / 14 + 0.5));
-                double tex = 0;
-                for (float[] cr : craters) {
-                    double dx = (x - C) - cr[0], dy = (y - C) - cr[1], d = dx * dx + dy * dy;
-                    if (d < cr[2] * cr[2]) tex = Math.max(tex, 0.35 * (1 - d / (cr[2] * cr[2])));
-                }
-                double shade = 0.55 + 0.45 * Math.sqrt(1 - rr), v = (0.88 - tex) * shade * l + 0.04 * (1 - l);
-                int a = rr < 0.97 ? 255 : (int) (255 * (1 - rr) / 0.03);
-                b.setPixel(x, y, (a << 24) | ((int) (240 * v) << 16) | ((int) (236 * v) << 8) | (int) (226 * v));
+                double nz = Math.sqrt(1 - rr);
+                double lat = Math.asin(-ny), lon = Math.atan2(nx, nz);
+                int u = (int) ((lon / (2 * Math.PI) + 0.5) * mw) % mw, v = Math.min(mh - 1, (int) ((0.5 - lat / Math.PI) * mh));
+                double t = (tex[v * mw + u] & 0xff) / 255.0;
+                t = Math.min(1, Math.max(0, (t - 0.12) * 1.35));  // a little more relief
+                double lambert = nx * sx + nz * sz;
+                double lit = Math.max(0, Math.min(1, lambert * 9 + 0.15)) * (0.35 + 0.65 * Math.max(0, lambert));
+                double val = t * (0.18 + 0.95 * lit) * (lit > 0.01 ? 1 : 0) + t * 0.07 * (1 - Math.min(1, lit * 4)); // earthshine
+                double edge = rr > 0.985 ? (1 - rr) / 0.015 : 1;
+                int r = (int) Math.min(255, 244 * val), g = (int) Math.min(255, 240 * val), bl = (int) Math.min(255, 230 * val);
+                out[y * size + x] = ((int) (255 * edge) << 24) | (r << 16) | (g << 8) | bl;
             }
+        b.setPixels(out, 0, size, 0, 0, size, size);
         return b;
     }
+
+    /** Fraction of the disc that is lit. */
+    static double moonLit(double age) { return (1 - Math.cos(2 * Math.PI * age / 29.530588853)) / 2; }
 }

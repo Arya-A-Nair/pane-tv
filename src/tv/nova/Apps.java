@@ -136,6 +136,15 @@ final class Apps {
         prefs.edit().putString("favs", sb.toString()).apply();
     }
 
+    /** A newly installed app joins the orbit by itself (unless the family unpinned it before). */
+    void autoPin(String pkg) {
+        App a = byPkg.get(pkg);
+        if (a == null || isFavourite(a) || prefs.getBoolean("unpinned:" + pkg, false)) return;
+        toggleFavourite(a);
+    }
+
+    void markUnpinned(App a, boolean unpinned) { prefs.edit().putBoolean("unpinned:" + a.pkg, unpinned).apply(); }
+
     void opened(App a) { prefs.edit().putLong("last:" + a.pkg, System.currentTimeMillis()).apply(); }
     long lastOpened(App a) { return prefs.getLong("last:" + a.pkg, 0); }
 
