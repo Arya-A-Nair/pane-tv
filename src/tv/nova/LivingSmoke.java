@@ -47,6 +47,7 @@ final class LivingSmoke extends GLSurfaceView implements GLSurfaceView.Renderer,
     private static final int DENSITY_W = 320, DENSITY_H = 180, LIGHT_W = 160, LIGHT_H = 90, NOISE = 256, PALETTE_W = 256, PALETTE_H = 144;
     private static final long SPREAD_MS = 2200;
     private static final float SLOW_FRAME_MS = 26f;
+    private static final int HEARTBEAT_FRAMES = 150;
 
     private final Listener listener;
     private volatile Bitmap picture;                      // waiting to be uploaded
@@ -63,7 +64,7 @@ final class LivingSmoke extends GLSurfaceView implements GLSurfaceView.Renderer,
     private int lightNow;
     private FloatBuffer quad;
     private int width = 1, height = 1;
-    private long frames, drawNanos;
+    private long frames, drawNanos, heartbeat = SystemClock.uptimeMillis();
     private float lastZoom;
 
     LivingSmoke(Context c, Listener listener) {
@@ -130,6 +131,7 @@ final class LivingSmoke extends GLSurfaceView implements GLSurfaceView.Renderer,
             "uniform float uTime;\n" +
             "varying vec2 vPos;\n" +
             "const mat2 TURN = mat2(1.6, 1.2, -1.2, 1.6);\n" +     // rotate and double the frequency
+            "const float SPEED = 3.2;\n" +                         // how fast everything below evolves: calm, but plainly alive
             // smooth value noise from a texture of random numbers: one read gives four independent values
             "vec4 noise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return texture2D(uNoise, (i + f + 0.5) / 256.0); }\n" +
             // each octave slides on its own, so shapes change rather than just move
@@ -144,7 +146,7 @@ final class LivingSmoke extends GLSurfaceView implements GLSurfaceView.Renderer,
             "  return v;\n" +
             "}\n" +
             "void main() {\n" +
-            "  float t = uTime;\n" +
+            "  float t = uTime * SPEED;\n" +
             "  vec2 p = (vPos - vec2(0.77, 0.26)) * vec2(1.78, 1.0);\n" +
             "  float turn = 0.05 * sin(t * 0.021) + t * 0.0025;\n" +                           // the whole body turns slowly about the light
             "  p = mat2(cos(turn), sin(turn), -sin(turn), cos(turn)) * p * 2.1 + vec2(3.0 - t * 0.016, 7.0 + t * 0.009);\n" +   // and drifts up and across
@@ -308,6 +310,7 @@ final class LivingSmoke extends GLSurfaceView implements GLSurfaceView.Renderer,
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, palette, 0);
             small.recycle();
             palette.recycle();
+            alive = false;   // tell the listener again once this picture is on screen
         }
         float seconds = (now % 7_200_000L) / 1000f;
 
@@ -336,15 +339,17 @@ final class LivingSmoke extends GLSurfaceView implements GLSurfaceView.Renderer,
         draw();
 
         if (!alive) { alive = true; post(listener::onAlive); }
-        if (!judged) {   // time the first few seconds once, with the GPU's work included
-            GLES20.glFinish();
-            drawNanos += System.nanoTime() - began;
-            if (++frames == 120) {
-                judged = true;
-                float ms = drawNanos / 1e6f / frames;
-                Log.i(TAG, String.format("%dx%d, %.1f ms a frame", width, height, ms));
-                if (ms > SLOW_FRAME_MS) post(listener::onTooSlow);
-            }
+        // Every five seconds of drawing, say so: how many frames, and how long each took with the GPU's work included.
+        GLES20.glFinish();
+        drawNanos += System.nanoTime() - began;
+        if (++frames == HEARTBEAT_FRAMES) {
+            float ms = drawNanos / 1e6f / frames;
+            Log.i(TAG, String.format("%d frames in %.1f s at %dx%d, %.1f ms each", frames, (now - heartbeat) / 1000f, width, height, ms));
+            if (ms > SLOW_FRAME_MS && !judged) post(listener::onTooSlow);
+            judged = true;
+            frames = 0;
+            drawNanos = 0;
+            heartbeat = now;
         }
     }
 }
