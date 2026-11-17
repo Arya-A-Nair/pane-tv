@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pane: the glass home screen for your TV</title>
+<meta name="description" content="Pane is a free, open-source home screen for Amazon Fire TV and Android TV. Your apps, the time, the sky outside, and living smoke behind frosted glass. No ads, no accounts, no tracking.">
+<meta name="theme-color" content="#090B10">
+<link rel="canonical" href="https://arya-a-nair.github.io/pane-tv/">
+<link rel="icon" type="image/png" href="icon.png">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Pane">
+<meta property="og:title" content="Pane: the glass home screen for your TV">
+<meta property="og:description" content="A free, open-source home screen for Fire TV and Android TV. No ads, no accounts, no tracking.">
+<meta property="og:url" content="https://arya-a-nair.github.io/pane-tv/">
+<meta property="og:image" content="https://arya-a-nair.github.io/pane-tv/img/social-preview.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="Pane on a TV: an app focused over living smoke, behind frosted glass">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Pane: the glass home screen for your TV">
+<meta name="twitter:description" content="A free, open-source home screen for Fire TV and Android TV. No ads, no accounts, no tracking.">
+<meta name="twitter:image" content="https://arya-a-nair.github.io/pane-tv/img/social-preview.png">
+<meta name="twitter:image:alt" content="Pane on a TV: an app focused over living smoke, behind frosted glass">
+
+<link rel="preload" href="fonts/manrope-light.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="preload" href="fonts/inter-regular.ttf" as="font" type="font/ttf" crossorigin>
+
+<style>
+/* Palette and type are Pane's own (DESIGN.md): Obsidian, Porcelain, Mist, Glacier, Champagne; Manrope Light + Inter. */
+@font-face{font-family:Manrope;font-weight:300;font-display:swap;src:url(fonts/manrope-light.ttf) format("truetype")}
+@font-face{font-family:Inter;font-weight:400;font-display:swap;src:url(fonts/inter-regular.ttf) format("truetype")}
+@font-face{font-family:Inter;font-weight:500;font-display:swap;src:url(fonts/inter-medium.ttf) format("truetype")}
+
+:root{
+  --obsidian:#090B10; --graphite:#20242C; --porcelain:#E9ECF2; --mist:#CED4DF;
+  --glacier:#A4B8EE; --champagne:#B4A28C;
+  --panel:28px; --pic:12px;
+  --wrap:1180px; --gutter:clamp(20px,5vw,48px);
+  --rim:rgba(255,255,255,.14);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:88px}
+body{margin:0;overflow-x:clip;background:var(--obsidian);color:var(--mist);font:400 17px/1.65 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%;height:auto}
+a{color:var(--porcelain);text-decoration-color:rgba(233,236,242,.4);text-underline-offset:.2em;text-decoration-thickness:1px;transition:text-decoration-color .2s}
+a:hover{text-decoration-color:var(--porcelain)}
+:focus-visible{outline:2.5px solid var(--porcelain);outline-offset:4px;border-radius:6px}
+.wrap{width:100%;max-width:calc(var(--wrap) + 2*var(--gutter));margin-inline:auto;padding-inline:var(--gutter)}
+h1,h2,h3{font-family:Manrope,Inter,sans-serif;font-weight:300;letter-spacing:-.02em;color:var(--porcelain);margin:0;text-wrap:balance}
+h1{font-size:clamp(2.7rem,6.6vw,5.2rem);line-height:1.02}
+h2{font-size:clamp(2rem,4.4vw,3.2rem);line-height:1.1}
+h3{font-size:clamp(1.55rem,2.6vw,2rem);line-height:1.15}
+p{margin:0;max-width:60ch}
+section{padding-block:clamp(72px,11vw,144px)}
+
+.skip{position:absolute;left:16px;top:-80px;background:var(--porcelain);color:var(--obsidian);padding:10px 18px;border-radius:99px;z-index:20;font-weight:500;text-decoration:none}
+.skip:focus{top:12px}
+
+/* glass: frost + sheen + rim, as in DESIGN.md */
+.glass{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.035) 55%);border:1px solid var(--rim);border-top-color:rgba(255,255,255,.3);-webkit-backdrop-filter:blur(22px) saturate(1.35);backdrop-filter:blur(22px) saturate(1.35);box-shadow:0 10px 40px rgba(0,0,0,.45)}
+
+/* header */
+header.bar{position:sticky;top:12px;z-index:10;margin:12px auto 0;width:min(calc(100% - 2*var(--gutter)),var(--wrap))}
+.bar-in{display:flex;align-items:center;gap:20px;border-radius:99px;padding:8px 10px 8px 22px}
+.mark{font:300 1.6rem/1 Manrope,sans-serif;letter-spacing:-.02em;color:var(--porcelain);text-decoration:none;margin-right:auto;padding:6px 0}
+.bar nav{display:flex;gap:2px}
+.bar nav a{font-weight:500;font-size:.95rem;text-decoration:none;color:var(--mist);padding:9px 16px;border-radius:99px;transition:background .2s,color .2s}
+.bar nav a:hover{background:rgba(233,236,242,.14);color:var(--porcelain)}
+
+/* buttons: solid Porcelain capsule = the focus state; glass capsule is secondary */
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 28px;border-radius:99px;font-weight:500;font-size:1rem;text-decoration:none;border:1px solid transparent;transition:transform .15s,background .2s,box-shadow .2s}
+.btn:active{transform:scale(.97)}
+.btn-solid{background:var(--porcelain);color:var(--obsidian)}
+.btn-solid:hover{background:#fff;box-shadow:0 8px 30px rgba(164,184,238,.28)}
+.btn-glass{background:rgba(233,236,242,.08);color:var(--porcelain);border-color:var(--rim)}
+.btn-glass:hover{background:rgba(233,236,242,.16)}
+.btn-sm{min-height:40px;padding:0 20px;font-size:.93rem}
+.actions{display:flex;flex-wrap:wrap;gap:14px}
+
+/* hero: the room is lit from the upper right, like every Pane environment */
+.hero{padding-block:clamp(40px,6vw,80px) clamp(48px,7vw,88px);position:relative}
+.hero::before{content:"";position:absolute;inset:-100px 0 auto 20%;height:100%;background:radial-gradient(60% 60% at 70% 20%,rgba(164,184,238,.2),rgba(180,162,140,.07) 55%,transparent 75%);pointer-events:none}
+.hero .wrap{position:relative}
+.hero h1{max-width:16ch}
+.lede{font-size:clamp(1.1rem,1.6vw,1.3rem);color:var(--mist);margin:24px 0 32px;max-width:46ch}
+.shot{margin-top:clamp(48px,7vw,88px)}
+.shot img,.pic img{border-radius:var(--pic);width:100%;aspect-ratio:16/9;object-fit:cover;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08)}
+.shot img{box-shadow:0 40px 120px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.1)}
+
+/* hero entrance: the single orchestrated moment */
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes lit{from{opacity:0;transform:scale(.985)}to{opacity:1;transform:none}}
+.hero h1,.hero .lede,.hero .actions{animation:rise .9s cubic-bezier(.2,.7,.2,1) both}
+.hero .lede{animation-delay:.12s}.hero .actions{animation-delay:.24s}
+.hero .shot{animation:lit 1.4s cubic-bezier(.2,.7,.2,1) .35s both}
+
+/* film */
+.film-head{display:grid;gap:18px;margin-bottom:44px}
+.film-link{position:relative;display:block;border-radius:var(--pic);overflow:hidden;text-decoration:none;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08)}
+.film-link img{width:100%;aspect-ratio:16/9;object-fit:cover;transition:transform .6s cubic-bezier(.2,.7,.2,1)}
+.film-link:hover img{transform:scale(1.025)}
+.film-link span{position:absolute;left:clamp(14px,3vw,32px);bottom:clamp(14px,3vw,32px);padding:12px 24px;border-radius:99px;font-weight:500;color:var(--porcelain)}
+.film-link:focus-visible{outline-offset:6px;border-radius:var(--pic)}
+
+/* features */
+.features>.wrap>h2{margin-bottom:clamp(48px,8vw,96px)}
+.feat{display:grid;grid-template-columns:repeat(12,1fr);gap:clamp(28px,4vw,56px) 24px;align-items:center;margin-bottom:clamp(64px,10vw,128px)}
+.feat:last-child{margin-bottom:0}
+.feat .txt{grid-column:1/6;display:grid;gap:16px}
+.feat .pic{grid-column:6/13}
+.feat.flip .txt{grid-column:8/13;grid-row:1}
+.feat.flip .pic{grid-column:1/8;grid-row:1}
+.pic{overflow:hidden;border-radius:var(--pic)}
+.pic img{transition:transform .6s cubic-bezier(.2,.7,.2,1)}
+.pic:hover img{transform:scale(1.02)}
+.pic{box-shadow:none}
+.also{margin-top:clamp(56px,8vw,96px);padding:clamp(28px,4vw,48px);border-radius:var(--panel)}
+.also p{max-width:70ch;color:var(--porcelain)}
+
+/* install */
+.install .wrap>h2{margin-bottom:20px}
+.steps{list-style:none;margin:clamp(40px,6vw,72px) 0 0;padding:0;display:grid;gap:20px}
+.steps>li{display:grid;grid-template-columns:auto 1fr;gap:12px clamp(20px,4vw,48px);padding:clamp(24px,3.5vw,40px);border-radius:var(--panel)}
+.steps .n{font:300 clamp(2.6rem,5vw,4rem)/1 Manrope,sans-serif;color:var(--glacier);min-width:1.1ch}
+.steps h3{margin-bottom:10px}
+.steps .body{display:grid;gap:14px;min-width:0}
+.steps strong{color:var(--porcelain);font-weight:500}
+.os{font-weight:500;color:var(--porcelain);font-size:.95rem;margin-top:6px}
+pre{margin:0;padding:18px 20px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1);border-radius:var(--pic);overflow-x:auto;font:400 .88rem/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--porcelain);white-space:pre-wrap;overflow-wrap:anywhere}
+.more{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:20px}
+.more>div{padding:clamp(24px,3.5vw,36px);border-radius:var(--panel);display:grid;gap:12px;align-content:start}
+.more h3{font-size:1.45rem}
+
+/* privacy, open source */
+.pair{display:grid;grid-template-columns:repeat(2,1fr);gap:clamp(40px,7vw,96px)}
+.pair>div{display:grid;gap:20px;align-content:start}
+.pair .actions{margin-top:8px}
+.rule{border:0;border-top:1px solid rgba(255,255,255,.1);margin:0}
+
+footer{padding-block:56px 72px;border-top:1px solid rgba(255,255,255,.1);font-size:.95rem}
+footer .wrap{display:grid;gap:20px}
+footer p{max-width:80ch}
+footer .mark{margin:0;font-size:1.4rem}
+
+@media (max-width:900px){
+  .feat,.feat.flip{grid-template-columns:1fr}
+  .feat .txt,.feat .pic,.feat.flip .txt,.feat.flip .pic{grid-column:1;grid-row:auto}
+  .feat .pic,.feat.flip .pic{order:2}
+  .more,.pair{grid-template-columns:1fr}
+}
+@media (max-width:600px){
+  body{font-size:16px}
+  .bar nav a{padding:9px 10px;font-size:.88rem}
+  .bar nav a.opt{display:none}
+  .bar-in{padding-left:18px}
+  .actions .btn{flex:1 1 100%}
+  .steps>li{grid-template-columns:1fr}
+  .film-link span{padding:9px 16px;font-size:.9rem}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media (prefers-reduced-transparency:reduce){.glass{background:var(--graphite);-webkit-backdrop-filter:none;backdrop-filter:none}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="bar">
+  <div class="bar-in glass">
+    <a class="mark" href="#top" aria-label="Pane, back to top">Pane</a>
+    <nav aria-label="Main">
+      <a class="opt" href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a class="opt" href="#privacy">Privacy</a>
+      <a href="https://github.com/Arya-A-Nair/pane-tv">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<section class="hero" id="top">
+  <div class="wrap">
+    <h1>The glass home screen for your TV.</h1>
+    <p class="lede">A free, open-source home screen for Amazon Fire TV and Android TV. No ads, no accounts, no tracking.</p>
+    <div class="actions">
+      <a class="btn btn-solid" href="https://github.com/Arya-A-Nair/pane-tv/releases/latest/download/pane.apk">Download the APK</a>
+      <a class="btn btn-glass" href="https://github.com/Arya-A-Nair/pane-tv#install">Install guide</a>
+    </div>
+    <div class="shot">
+      <img src="img/hero.webp" srcset="img/hero-900.webp 900w, img/hero.webp 1800w" sizes="(min-width:1280px) 1180px, 92vw" width="1800" height="1012" fetchpriority="high" alt="Pane on a TV: Netflix focused, its colour lighting the smoke behind frosted glass, with weather, air quality and the moon">
+    </div>
+  </div>
+</section>
+
+<section class="film" id="film">
+  <div class="wrap">
+    <div class="film-head">
+      <h2>See it move.</h2>
+      <p>A 44-second launch film, made from Pane running on a 2018 Fire TV Stick 4K. The smoke is Pane's own shader.</p>
+    </div>
+    <!-- FILM: replace this link with an inline <video controls preload="none" poster="img/poster.webp"> once the film is hosted with the site (docs/media/pane-launch.mp4 is 29 MB, too heavy to ship here). -->
+    <a class="film-link" href="https://github.com/Arya-A-Nair/pane-tv#see-it-move">
+      <img src="img/poster.webp" width="1600" height="900" loading="lazy" alt="Watch the 44-second Pane launch film">
+      <span class="glass">Watch the film on GitHub</span>
+    </a>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <div class="wrap">
+    <h2>Calm, for the whole family.</h2>
+
+    <article class="feat">
+      <div class="txt">
+        <h3>A home that's alive.</h3>
+        <p>Volumetric smoke drifts behind frosted glass. Move to another app and its colour spreads through the smoke like dye in water.</p>
+      </div>
+      <div class="pic">
+        <picture>
+          <source media="(prefers-reduced-motion: reduce)" srcset="img/home-switch.webp">
+          <img src="img/colour-spread.gif" width="720" height="405" loading="lazy" alt="Moving between apps on Pane: the new app's colour spreads through the smoke like dye">
+        </picture>
+      </div>
+    </article>
+
+    <article class="feat flip">
+      <div class="txt">
+        <h3>Two buttons get you anywhere.</h3>
+        <p>Round icons for the apps you use, and every app one page away. Newly installed apps join by themselves, and there are no sponsored rows, ever. Pin or unpin with the menu button. Nothing is hidden behind gestures.</p>
+      </div>
+      <div class="pic"><img src="img/apps.webp" width="1400" height="788" loading="lazy" alt="Pane's All apps page: a grid of round app icons"></div>
+    </article>
+
+    <article class="feat">
+      <div class="txt">
+        <h3>Today, with the real moon.</h3>
+        <p>Live weather and air quality for your city, sunrise and sunset, and the moon at tonight's phase, travelling its actual path across the night sky.</p>
+      </div>
+      <div class="pic"><img src="img/today.webp" width="1400" height="788" loading="lazy" alt="Pane's Today page: weather, hourly forecast, air quality, tonight's moon and its path across the sky"></div>
+    </article>
+
+    <article class="feat flip">
+      <div class="txt">
+        <h3>Backgrounds worth looking at.</h3>
+        <p>Six living smoke fields that drift and take on your app's colour, or NASA photographs of Earth from orbit, all behind real frosted glass.</p>
+      </div>
+      <div class="pic"><img src="img/backgrounds.webp" width="1400" height="788" loading="lazy" alt="Pane's Backgrounds page: six living smoke fields and four NASA photographs"></div>
+    </article>
+
+    <article class="feat">
+      <div class="txt">
+        <h3>Fire TV settings stay one press away.</h3>
+        <p>Pane never hides the system. Display, sound and remotes are always reachable, in one tap from Pane's own settings.</p>
+      </div>
+      <div class="pic"><img src="img/settings.webp" width="1400" height="788" loading="lazy" alt="Pane's Settings page, including a one-tap link to Fire TV settings"></div>
+    </article>
+
+    <div class="also glass">
+      <p>There is also an ambient mode that turns the screen into a slow window when nobody's watching, small spring-based motion everywhere you look, and a reduced-motion setting if you prefer it still.</p>
+    </div>
+  </div>
+</section>
+
+<section class="install" id="install">
+  <div class="wrap">
+    <h2>Install in three steps.</h2>
+    <p>Amazon doesn't let other apps replace the Fire TV home screen, so Pane needs a one-time setup from a computer on the same Wi-Fi. It takes about two minutes.</p>
+
+    <ol class="steps">
+      <li class="glass">
+        <span class="n" aria-hidden="true">1</span>
+        <div class="body">
+          <h3>Turn on ADB debugging.</h3>
+          <p>On the TV, go to <strong>Settings → My Fire TV → Developer options → ADB debugging → On</strong>. No Developer options? Go to <strong>Settings → My Fire TV → About</strong> and press OK on your device name seven times.</p>
+        </div>
+      </li>
+      <li class="glass">
+        <span class="n" aria-hidden="true">2</span>
+        <div class="body">
+          <h3>Find the TV's IP address.</h3>
+          <p>Go to <strong>Settings → My Fire TV → About → Network</strong>.</p>
+        </div>
+      </li>
+      <li class="glass">
+        <span class="n" aria-hidden="true">3</span>
+        <div class="body">
+          <h3>Run the installer.</h3>
+          <p>On your computer, run the command for your system, with your TV's address in place of the example.</p>
+          <p class="os">macOS and Linux</p>
+          <pre tabindex="0"><code>curl -fsSL https://raw.githubusercontent.com/Arya-A-Nair/pane-tv/main/install/pane-install.sh | bash -s -- 192.168.1.20</code></pre>
+          <p class="os">Windows (PowerShell)</p>
+          <pre tabindex="0"><code>iwr https://raw.githubusercontent.com/Arya-A-Nair/pane-tv/main/install/pane-install.ps1 -OutFile pane-install.ps1; ./pane-install.ps1 192.168.1.20</code></pre>
+          <p>A prompt appears on the TV: choose <strong>Always allow from this computer</strong>, then <strong>OK</strong>. Press Home on your remote and Pane appears. Amazon briefly holds the Home button for a few seconds before Pane takes over; Pane shows a calm screen instead of Amazon's ads while it waits.</p>
+          <p>The installer downloads the latest signed release, checks its checksum, installs it, and grants the two permissions Pane needs. It's safe to run again to update.</p>
+        </div>
+      </li>
+    </ol>
+
+    <div class="more">
+      <div class="glass">
+        <h3>Google TV or Android TV</h3>
+        <p>Download <a href="https://github.com/Arya-A-Nair/pane-tv/releases/latest/download/pane.apk">pane.apk</a> and install it, for example with the Downloader app or Send Files to TV. Then press Home and choose Pane as your home app.</p>
+      </div>
+      <div class="glass">
+        <h3>Remove it any time.</h3>
+        <p>Run <code>adb uninstall tv.pane</code> and your TV goes straight back to its original home screen. Pane never changes system files.</p>
+      </div>
+    </div>
+    <p style="margin-top:28px">Needs Fire OS 6 or newer, or Android 5.1 or newer on Android TV and Google TV. Tested on a Fire TV Stick 4K (2018); <a href="https://github.com/Arya-A-Nair/pane-tv/issues/new/choose">tell us how it goes</a> on yours.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<section id="privacy">
+  <div class="wrap pair">
+    <div>
+      <h2>Private by design.</h2>
+      <p>Pane has no accounts, no analytics and no ads. The only network requests are for the weather: your approximate location comes from your public IP address (ip-api.com), and the weather and air quality for that location come from Open-Meteo.</p>
+      <div class="actions"><a class="btn btn-glass btn-sm" href="https://github.com/Arya-A-Nair/pane-tv/blob/main/PRIVACY.md">Read the privacy details</a></div>
+    </div>
+    <div id="open-source">
+      <h2>Free and open source.</h2>
+      <p>Pane is MIT licensed. The home screen is a plain-Java Android app with no third-party libraries, small enough to run smoothly on a 2018 Fire TV Stick. Read the code, build it yourself, or report what's broken.</p>
+      <div class="actions">
+        <a class="btn btn-solid btn-sm" href="https://github.com/Arya-A-Nair/pane-tv">View on GitHub</a>
+        <a class="btn btn-glass btn-sm" href="https://github.com/Arya-A-Nair/pane-tv/blob/main/CONTRIBUTING.md">Build from source</a>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="mark" href="#top">Pane</a>
+    <p>Earth and Moon imagery: NASA (public domain), including the Artemis II "Earthset" and International Space Station photography. Moon surface map: NASA Lunar Reconnaissance Orbiter (public domain).</p>
+    <p>Weather and air quality: <a href="https://open-meteo.com">Open-Meteo</a> (CC BY 4.0). Location: <a href="https://ip-api.com">ip-api.com</a>.</p>
+    <p>Fonts: <a href="https://github.com/sharanda/manrope">Manrope</a> and <a href="https://rsms.me/inter/">Inter</a> (SIL Open Font License).</p>
+    <p>App names and icons shown in screenshots belong to their owners. Pane isn't affiliated with Amazon, Google or any of them. MIT licence, © 2026 Arya Nair.</p>
+  </div>
+</footer>
+</body>
+</html>

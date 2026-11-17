@@ -1,0 +1,8 @@
+out/
+*.apk
+*.keystore
+*.jks
+.DS_Store
+*.idsig
+.claude/
+__pycache__/

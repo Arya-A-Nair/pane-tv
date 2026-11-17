@@ -1,0 +1,30 @@
+name: Stale
+
+on:
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v11
+        with:
+          days-before-stale: 60
+          days-before-close: 14
+          exempt-issue-labels: pinned,security
+          exempt-pr-labels: pinned,security
+          stale-issue-message: >
+            Thanks for opening this. It has had no activity for 60 days, so I'm marking it stale.
+            If it still matters, leave a comment and it will stay open; otherwise it will close in 14 days.
+          stale-pr-message: >
+            Thanks for the contribution. This PR has had no activity for 60 days, so I'm marking it stale.
+            If you're still working on it, leave a comment or push a change; otherwise it will close in 14 days.
+            You're welcome to reopen it later.
+          close-issue-message: Closing due to inactivity. Feel free to reopen if this is still relevant.
+          close-pr-message: Closing due to inactivity. Feel free to reopen when you pick it back up.
