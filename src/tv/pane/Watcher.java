@@ -46,7 +46,7 @@ public class Watcher extends Service {
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
-        startForeground(NOTIFICATION_ID, new Notification.Builder(this).setContentTitle("Home")
+        startForeground(NOTIFICATION_ID, new Notification.Builder(this).setContentTitle("Pane")
                 .setSmallIcon(android.R.drawable.ic_menu_revert).build());
         if (thread == null || !thread.isAlive()) {
             thread = new Thread(this::loop, "pane-watch");
