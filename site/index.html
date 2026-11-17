@@ -56,9 +56,13 @@
 }
 </style>
 <script>document.documentElement.classList.add('m-enter');setTimeout(()=>document.documentElement.classList.add('m-enter-done'),700)</script>
-<script>document.documentElement.classList.add('mo-js');setTimeout(()=>document.documentElement.classList.add('mo-safe'),2500)</script>
-<link rel="modulepreload" href="assets/moments/moments.js"><link rel="modulepreload" href="assets/moments/lib.js"><link rel="modulepreload" href="assets/moments/iris-opens/moment.js">
 <style>
+/* sections hug their content below the hero (owner review: forced screen heights left half-empty screens) */
+html main > :is(section, .section):not(.hero), html footer.closing { height: auto; min-height: 0; }
+html main > :is(section, .section):not(.hero) > .wrap, html footer.closing > .wrap { height: auto; }
+html main > .section.g2 > .wrap { grid-template-rows: auto auto; row-gap: var(--s-9); }
+html main > .section.g2 > .wrap > .grid:last-child, html main > .section.g2 > .wrap > .group > .grid:last-child { flex: none; align-self: start; }
+html footer.closing > .wrap { row-gap: var(--s-9); }
 /* page CSS: inside the visuals only (the TV, the commands, the closing photograph) */
 @property --glow { syntax: "<color>"; inherits: true; initial-value: rgb(150 40 60); }
 .card > h3, h3 { font-family: var(--font-text); }
@@ -134,7 +138,7 @@ code { font: 400 .92em var(--font-mono); }
 <!-- type: software
      deal: hero collage (adapted: the TV whole on a lit room, no cut window), nav nav-centre, close close-type,
            footer footer-statement, rhythm dark-band, buttons tonal, mark wordmark, grounds none (Pane's own Nocturne in the hero)
-     moments: iris-opens on #film (the film's section opens like a cinema iris onto the light ground)
+     moments: none (iris-opens removed after review: it looked broken half-open)
      effect: the hero's room glows in the colour of the real home-screen recording (Pane's own idea: a dark room lit by
              what you are about to watch) -->
 <header class="nav nav--centre">
@@ -218,7 +222,7 @@ code { font: 400 .92em var(--font-mono); }
     </div>
   </section>
 
-  <section class="section ground-inverse" id="film" aria-labelledby="film-h" data-moment="iris-opens" data-moment-opts='{"from": "base"}'>
+  <section class="section ground-inverse" id="film" aria-labelledby="film-h">
     <div class="wrap">
       <div class="grid film-grid">
         <div class="section-head span-4">
@@ -267,7 +271,7 @@ powershell -ExecutionPolicy Bypass -File .\pane-install.ps1 192.168.1.20</code><
         <div class="after span-5">
           <div>
             <h3>Press Home, and Pane appears</h3>
-            <p>Amazon holds the Home button for a few seconds before Pane takes over; Pane shows a still screen instead of Amazon's ads while it waits. The installer downloads the latest signed release, checks its checksum, installs it and grants the two permissions Pane needs. Run it again to update.</p>
+            <p>Amazon holds the Home button for a few seconds before Pane takes over; Pane shows a still screen instead of Amazon's ads while it waits. The installer downloads the latest signed release, checks its checksum, installs it and grants the permissions Pane needs and keeps its watcher from being put to sleep. Run it again to update.</p>
           </div>
           <div>
             <h3>Google TV and Android TV</h3>
