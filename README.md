@@ -28,7 +28,7 @@ Pane replaces it with something calm: your apps, the time, the sky outside, and 
 
 <img src="docs/media/colour-spread.gif" alt="Moving between apps: the new app's colour spreads through the smoke like dye" width="100%">
 
-<sub>Made from Pane running on a 2018 Fire TV Stick 4K; the smoke is Pane's own shader. Music: "After" by SondreDrakensson (freesound.org), CC BY 4.0.</sub>
+<sub>Made from Pane running on a 2018 Fire TV Stick 4K; the smoke is Pane's own shader.</sub>
 
 ## What you get
 
@@ -79,7 +79,8 @@ curl -fsSL https://raw.githubusercontent.com/Arya-A-Nair/pane-tv/main/install/pa
 
 **Windows (PowerShell)**
 ```powershell
-iwr https://raw.githubusercontent.com/Arya-A-Nair/pane-tv/main/install/pane-install.ps1 -OutFile pane-install.ps1; ./pane-install.ps1 192.168.1.20
+iwr https://raw.githubusercontent.com/Arya-A-Nair/pane-tv/main/install/pane-install.ps1 -OutFile pane-install.ps1
+powershell -ExecutionPolicy Bypass -File .\pane-install.ps1 192.168.1.20
 ```
 
 4. A prompt appears on the TV: choose **Always allow from this computer**, then **OK**.
@@ -131,7 +132,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for a map of the code, how to test withou
 - Earth and Moon imagery: NASA (public domain), including the Artemis II "Earthset" and International Space Station photography.
 - Moon surface map: NASA Lunar Reconnaissance Orbiter (public domain).
 - Weather and air quality: [Open-Meteo](https://open-meteo.com) (CC BY 4.0). Location: [ip-api.com](https://ip-api.com).
-- Launch film music: "After" by SondreDrakensson ([freesound.org](https://freesound.org/s/558260/)), CC BY 4.0. Sound effects: CC0, from Freesound.
 - Fonts: [Manrope](https://github.com/sharanda/manrope), [Inter](https://rsms.me/inter/) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (SIL Open Font License).
 
 App names and icons shown in screenshots belong to their owners. Pane isn't affiliated with Amazon, Google or any of them.
