@@ -83,15 +83,6 @@ public class Watcher extends Service {
         if (cover != null) return;
         FrameLayout v = new FrameLayout(this);
         v.setBackgroundColor(0xff090b10);
-        TextView mark = new TextView(this);
-        mark.setText("N O V A");
-        mark.setTextColor(0xffe9ecf2);
-        mark.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        mark.setLetterSpacing(0.32f);
-        try { mark.setTypeface(Typeface.createFromAsset(getAssets(), "fonts/inter-medium.ttf")); } catch (Exception ignored) { }
-        mark.setAlpha(0f);
-        v.addView(mark, new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER));
-        mark.animate().alpha(0.7f).setDuration(900).start();
         // swallow remote presses so they don't land on Amazon's home underneath
         v.setFocusable(true);
         v.setOnKeyListener(new View.OnKeyListener() { public boolean onKey(View view, int c, KeyEvent e) { return true; } });

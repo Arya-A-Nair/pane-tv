@@ -214,12 +214,6 @@ public class Nova extends Activity {
         moonNext = text(inter, 10.5f, PORCELAIN, 0.5f);
         place(sky, moonNext, 446, 54);
 
-        TextView mark = text(manropeL, 11, PORCELAIN, 0.7f);
-        mark.setText("NOVA");
-        mark.setLetterSpacing(0.6f);
-        FrameLayout.LayoutParams kl = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.END);
-        kl.setMargins(0, px(42), px(46), 0);
-        sky.addView(mark, kl);
 
         // weather lives on the right, wired to the city on the globe
         wCity = text(inter, 11.5f, PORCELAIN, 0.6f);
