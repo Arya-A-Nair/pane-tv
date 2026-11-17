@@ -28,7 +28,7 @@ Pane replaces it with something calm: your apps, the time, the sky outside, and 
 
 <img src="docs/media/colour-spread.gif" alt="Moving between apps: the new app's colour spreads through the smoke like dye" width="100%">
 
-<sub>Real footage from a 2018 Fire TV Stick 4K. Music: "After" by SondreDrakensson (freesound.org), CC BY 4.0.</sub>
+<sub>Made from Pane running on a 2018 Fire TV Stick 4K; the smoke is Pane's own shader. Music: "After" by SondreDrakensson (freesound.org), CC BY 4.0.</sub>
 
 ## What you get
 
@@ -43,11 +43,11 @@ Pane replaces it with something calm: your apps, the time, the sky outside, and 
   </tr>
   <tr>
     <td><img src="docs/media/today.jpg" alt="Today: weather, hourly forecast, air quality, tonight's moon and its path across the sky"></td>
-    <td><img src="docs/media/backgrounds.jpg" alt="Backgrounds: colour fields and NASA photographs"></td>
+    <td><img src="docs/media/backgrounds.jpg" alt="Backgrounds: six living smoke fields and four NASA photographs"></td>
   </tr>
   <tr>
     <td><b>Today, at a glance.</b> Live weather and air quality for your city, sunrise and sunset, and the real moon at tonight's phase, travelling its actual path across the night sky.</td>
-    <td><b>Backgrounds worth looking at.</b> Original colour fields and NASA photographs of Earth from orbit, behind real frosted glass.</td>
+    <td><b>Backgrounds worth looking at.</b> Six living smoke fields that drift and take on your app's colour, or NASA photographs of Earth from orbit, all behind real frosted glass.</td>
   </tr>
   <tr>
     <td><img src="docs/media/apps.jpg" alt="All apps"></td>
@@ -102,11 +102,17 @@ Your TV goes straight back to its original home screen. Pane never changes syste
 ## How it works
 
 - **The home screen** is a plain-Java Android app with no third-party libraries, small enough to run smoothly on a 2018 Fire TV Stick (1.5 GB RAM).
-- **The smoke** is a fragment shader rendered on the GPU. Frosted glass samples a pre-blurred copy of the background at each panel's exact position, because Fire OS has no blur API.
+- **The smoke** is a fragment shader rendered on the GPU at 30 fps. Frosted glass samples a pre-blurred copy of the background at each panel's exact position, because Fire OS has no blur API.
 - **The moon** is rendered on the device from NASA's lunar surface map. Its phase, rise and set times come from standard astronomical formulas, worked out offline.
 - **Taking over Home on Fire TV:** a small watcher notices when Amazon's home screen opens and brings Pane forward. It needs permission to read system logs, which the installer grants once over ADB.
 
 The design language is documented in [DESIGN.md](DESIGN.md).
+
+## Requirements
+
+- Fire TV (Fire OS 6 or newer) or Android TV / Google TV running Android 5.1 or newer.
+- For the Fire TV setup: a computer on the same Wi-Fi with [adb](https://developer.android.com/tools/releases/platform-tools) (the installer tells you how to get it).
+- Tested on a Fire TV Stick 4K (2018). Other devices should work; please [report how it goes](https://github.com/Arya-A-Nair/pane-tv/issues/new/choose).
 
 ## Privacy
 
@@ -124,7 +130,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Releases are built and signed by GitHub 
 
 - Earth and Moon imagery: NASA (public domain), including the Artemis II "Earthset" and International Space Station photography.
 - Moon surface map: NASA Lunar Reconnaissance Orbiter (public domain).
-- Map data: [Natural Earth](https://www.naturalearthdata.com) (public domain).
 - Weather and air quality: [Open-Meteo](https://open-meteo.com) (CC BY 4.0). Location: [ip-api.com](https://ip-api.com).
 - Launch film music: "After" by SondreDrakensson ([freesound.org](https://freesound.org/s/558260/)), CC BY 4.0. Sound effects: CC0, from Freesound.
 - Fonts: [Manrope](https://github.com/sharanda/manrope), [Inter](https://rsms.me/inter/) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (SIL Open Font License).

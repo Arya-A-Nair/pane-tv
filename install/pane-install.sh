@@ -45,7 +45,7 @@ if [ -z "$ip" ]; then
   say "What is your TV's IP address?"
   say "  Fire TV: Settings > My Fire TV > About > Network."
   say "  Also turn on Settings > My Fire TV > Developer options > ADB debugging."
-  read -r -p "TV IP: " ip
+  read -r -p "TV IP: " ip </dev/tty
 fi
 [ -n "$ip" ] || die "no IP given"
 case "$ip" in *:*) serial="$ip" ;; *) serial="$ip:5555" ;; esac
@@ -62,7 +62,7 @@ for attempt in 1 2 3; do
     device) break ;;
     unauthorized)
       say "The TV is asking to allow this computer. Choose 'Always allow' on the TV screen."
-      if [ -t 0 ]; then read -r -p "Press Enter once you have accepted... " _; else sleep 10; fi
+      if [ -r /dev/tty ]; then read -r -p "Press Enter once you have accepted... " _ </dev/tty; else sleep 10; fi
       adb connect "$serial" >/dev/null 2>&1 || true ;;
     *)
       [ "$attempt" = 3 ] && break
