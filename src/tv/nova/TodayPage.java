@@ -20,7 +20,8 @@ import java.util.Locale;
  * of its own. Nothing here is selectable.
  */
 final class TodayPage extends Page {
-    private final TextView context, city, temperature, condition, range, airIndex, airName, airNote, skyCaption, skyValue, skyNote, moonName, moonNote;
+    private final RollingText temperature, airIndex;
+    private final TextView context, city, condition, range, airName, airNote, skyCaption, skyValue, skyNote, moonName, moonNote;
     private final HourlyCurve hourly;
     private final AirScale airScale;
     private final SkyArc skyArc;
@@ -33,16 +34,18 @@ final class TodayPage extends Page {
         float airW = 320, weatherW = width - airW - gap, half = (width - gap) / 2;
 
         GlassPanel weather = ui.panel(view, Ui.MARGIN, top, weatherW, h1);
-        TextView[] r = reading(weather, "", 58);
-        city = r[0]; temperature = r[1]; condition = r[2]; range = r[3];
+        temperature = new RollingText(ui, ui.manrope, 58, Ui.PORCELAIN);
+        TextView[] r = reading(weather, "", temperature);
+        city = r[0]; condition = r[1]; range = r[2];
         hourly = new HourlyCurve(ui);
         FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams(ui.px(240), ui.px(h1 - 40), Gravity.END);
         hl.setMargins(0, ui.px(20), ui.px(24), 0);
         weather.addView(hourly, hl);
 
         GlassPanel air = ui.panel(view, Ui.MARGIN + weatherW + gap, top, airW, h1);
-        r = reading(air, "Air quality", 58);
-        airIndex = r[1]; airName = r[2]; airNote = r[3];
+        airIndex = new RollingText(ui, ui.manrope, 58, Ui.PORCELAIN);
+        r = reading(air, "Air quality", airIndex);
+        airName = r[1]; airNote = r[2];
         airScale = new AirScale(host, ui.dp);
         FrameLayout.LayoutParams al = new FrameLayout.LayoutParams(-1, ui.px(5), Gravity.BOTTOM);
         al.setMargins(ui.px(24), 0, ui.px(24), ui.px(22));
@@ -64,20 +67,21 @@ final class TodayPage extends Page {
         sky.addView(moon, ml);
         TextView[] m = stacked(sky, "Moon", 144);
         moonName = m[1]; moonNote = m[2];
+        row(weather, air);
+        row(day, sky);
         refresh();
     }
 
     @Override boolean selectable() { return false; }
     @Override void focus(boolean holdsFocus, boolean animate) { }
 
-    /** A label, a large figure, and two lines beside the figure. Returns {label, figure, first line, second line}. */
-    private TextView[] reading(GlassPanel g, String label, float figureSp) {
+    /** A label, a large figure, and two lines beside the figure. Returns {label, first line, second line}. */
+    private TextView[] reading(GlassPanel g, String label, RollingText figure) {
         TextView caption = ui.text(ui.inter, 14, Ui.MIST);
         caption.setText(label);
         ui.place(g, caption, 24, 20);
         LinearLayout row = new LinearLayout(host);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        TextView figure = ui.text(ui.manrope, figureSp, Ui.PORCELAIN);
         row.addView(figure);
         LinearLayout lines = new LinearLayout(host);
         lines.setOrientation(LinearLayout.VERTICAL);
@@ -88,8 +92,8 @@ final class TodayPage extends Page {
         LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(-2, -2);
         ll.leftMargin = ui.px(16);
         row.addView(lines, ll);
-        ui.place(g, row, 24, 46);
-        return new TextView[]{caption, figure, first, second};
+        ui.place(g, row, 24, 60);
+        return new TextView[]{caption, first, second};
     }
 
     /** A label, a value under it, a note under that. Returns {label, value, note}. */
@@ -110,11 +114,11 @@ final class TodayPage extends Page {
         boolean ready = w != null && w.ready();
         int aqi = ready ? w.air() : -1;
         city.setText(ready ? w.city : "Weather");
-        temperature.setText(ready ? Math.round(w.temp) + "°" : "–");
+        temperature.set(ready ? Math.round(w.temp) + "°" : "–");
         condition.setText(ready ? w.describe() : "No reading yet");
         range.setText(ready ? Math.round(w.hi) + "° / " + Math.round(w.lo) + "°" : "Waiting for the network");   // short: the curve starts at 248 dp
         hourly.set(ready ? w.hourly : null, ready ? w.startHour : 0);
-        airIndex.setText(aqi < 0 ? "–" : String.valueOf(aqi));
+        airIndex.set(aqi < 0 ? "–" : String.valueOf(aqi));
         airName.setText(aqi < 0 ? "No reading yet" : Weather.AIR_NAME[Weather.airLevel(aqi)]);
         airNote.setText(aqi < 0 ? "" : Weather.AIR_NOTE[Weather.airLevel(aqi)]);
         airScale.set(aqi < 0 ? -1 : Weather.airLevel(aqi));
@@ -132,9 +136,9 @@ final class TodayPage extends Page {
                 + new SimpleDateFormat("d MMMM", Locale.getDefault()).format(now + (long) (daysToFull * 86_400_000L)));
     }
 
-    /** The next twelve hours as a line: six readings, each with its temperature above and its hour below. */
+    /** The next ten hours as a line: five readings, each with its temperature above and its hour below. */
     private static final class HourlyCurve extends View {
-        private static final int POINTS = 6;
+        private static final int POINTS = 5;
         private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG), dot = new Paint(Paint.ANTI_ALIAS_FLAG),
                 value = new Paint(Paint.ANTI_ALIAS_FLAG), hour = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path path = new Path();

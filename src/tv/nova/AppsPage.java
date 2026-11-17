@@ -18,6 +18,7 @@ final class AppsPage extends Page {
     private final TextView context;
     private final List<AppTile> tiles = new ArrayList<>();
     private int selected;
+    private int travel;   // -1 or 1 while focus is arriving from a move left or right
 
     AppsPage(Nova host) {
         super(host);
@@ -27,6 +28,7 @@ final class AppsPage extends Page {
         FrameLayout.LayoutParams gl = new FrameLayout.LayoutParams(-1, ui.px(2000));
         gl.topMargin = ui.px(Ui.CONTENT_TOP + 4);
         view.addView(grid, gl);
+        row(grid);
         fill();
     }
 
@@ -54,13 +56,16 @@ final class AppsPage extends Page {
 
     @Override boolean selectable() { return !tiles.isEmpty(); }
 
+    @Override AppTile tileFor(Apps.App app) { for (AppTile t : tiles) if (t.app == app) return t; return null; }
+
     @Override void focus(boolean holdsFocus, boolean animate) {
         int lastRow = (tiles.size() - 1) / COLUMNS, top = Math.max(0, Math.min(selected / COLUMNS, lastRow - 1));
         for (int i = 0; i < tiles.size(); i++) {
-            tiles.get(i).focus(holdsFocus && i == selected, animate);
+            tiles.get(i).focus(holdsFocus && i == selected, animate, travel);
             int r = i / COLUMNS;
             tiles.get(i).view.animate().alpha(r >= top && r <= top + 1 ? 1f : 0f).setDuration(animate ? Motion.ms(260) : 0).start();
         }
+        travel = 0;
         grid.animate().translationY(-top * ui.px(ROW_HEIGHT)).setDuration(animate ? Motion.ms(420) : 0).setInterpolator(Motion.GLIDE).start();
         if (tiles.isEmpty()) context.setText("");
         else context.setText(!holdsFocus ? tiles.size() + " apps" : host.apps.onHome(tiles.get(selected).app) ? "Menu  ·  Remove from Home" : "Menu  ·  Add to Home");
@@ -69,15 +74,21 @@ final class AppsPage extends Page {
     @Override boolean key(int k) {
         int n = tiles.size(), column = selected % COLUMNS;
         switch (k) {
-            case KeyEvent.KEYCODE_DPAD_LEFT: if (column > 0) selected--; return true;
-            case KeyEvent.KEYCODE_DPAD_RIGHT: if (column < COLUMNS - 1 && selected + 1 < n) selected++; return true;
-            case KeyEvent.KEYCODE_DPAD_UP: if (selected >= COLUMNS) selected -= COLUMNS; return true;
+            case KeyEvent.KEYCODE_DPAD_LEFT:
+                if (column > 0) { selected--; travel = -1; } else Motion.nudge(tiles.get(selected).view, -ui.px(7), 0);
+                return true;
+            case KeyEvent.KEYCODE_DPAD_RIGHT:
+                if (column < COLUMNS - 1 && selected + 1 < n) { selected++; travel = 1; } else Motion.nudge(tiles.get(selected).view, ui.px(7), 0);
+                return true;
+            case KeyEvent.KEYCODE_DPAD_UP:
+                if (selected >= COLUMNS) selected -= COLUMNS; else Motion.nudge(tiles.get(selected).view, 0, -ui.px(7));
+                return true;
             case KeyEvent.KEYCODE_DPAD_DOWN:
                 if (selected + COLUMNS < n) selected += COLUMNS;
                 else if (selected / COLUMNS < (n - 1) / COLUMNS) selected = n - 1;   // a short last row
                 else return false;
                 return true;
-            case KeyEvent.KEYCODE_DPAD_CENTER: host.launch(tiles.get(selected)); return true;
+            case KeyEvent.KEYCODE_DPAD_CENTER: { final AppTile t = tiles.get(selected); Motion.press(t.disc, () -> host.launch(t)); return true; }
             case KeyEvent.KEYCODE_MENU:
                 host.apps.toggleFavourite(tiles.get(selected).app);
                 markOnHome();

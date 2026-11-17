@@ -1,9 +1,13 @@
 package tv.nova;
 
+import android.animation.ValueAnimator;
 import android.graphics.Canvas;
+import android.graphics.LinearGradient;
 import android.graphics.Outline;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.RelativeSizeSpan;
@@ -27,6 +31,7 @@ final class AppTile {
     final TextView label;
     private final Ui ui;
     private boolean focused;
+    private float shine = 1f;   // 0..1 as a highlight crosses the icon; 1 = gone
 
     AppTile(final Ui ui, Apps.App a, float discDp, float cellDp) {
         this.ui = ui;
@@ -38,6 +43,8 @@ final class AppTile {
         disc = new View(ui.context) {
             final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
             final RectF r = new RectF();
+            final Paint glint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            final Path circle = new Path();
             @Override protected void onDraw(Canvas c) {
                 float dp = ui.dp, pad = RING_ROOM * dp, s = getWidth() - 2 * pad, mid = getWidth() / 2f, rad = s / 2f;
                 p.setStyle(Paint.Style.FILL);
@@ -54,6 +61,16 @@ final class AppTile {
                         float x = mid - g / 2 - q + (i % 2) * (q + g), y = mid - g / 2 - q + (i / 2) * (q + g);
                         c.drawRoundRect(x, y, x + q, y + q, q * 0.3f, q * 0.3f, p);
                     }
+                }
+                if (shine < 1f && app != null) {   // a soft diagonal band of light, clipped to the icon
+                    float at = pad + s * (-0.5f + 2f * shine), half = s * 0.42f;
+                    glint.setShader(new LinearGradient(at - half, at - half, at + half, at + half, new int[]{0x00ffffff, 0x3dffffff, 0x00ffffff}, null, Shader.TileMode.CLAMP));
+                    circle.rewind();
+                    circle.addCircle(mid, mid, rad, Path.Direction.CW);
+                    c.save();
+                    c.clipPath(circle);
+                    c.drawRect(pad, pad, pad + s, pad + s, glint);
+                    c.restore();
                 }
                 p.setStyle(Paint.Style.STROKE);
                 p.setStrokeWidth(Math.max(1.5f, dp * 0.75f));   // hairline that seats the icon on the dark
@@ -83,8 +100,17 @@ final class AppTile {
         view.setLayoutParams(new LinearLayout.LayoutParams(ui.px(cellDp), -2));
     }
 
-    void focus(boolean on, boolean animate) {
+    /** travel: -1 or 1 when focus arrived by moving left or right, 0 otherwise. */
+    void focus(boolean on, boolean animate, int travel) {
+        boolean gained = on && !focused && animate && !Motion.reduced;
         focused = on;
+        if (gained) {
+            ValueAnimator a = ValueAnimator.ofFloat(0f, 1f).setDuration(450);
+            a.addUpdateListener(x -> { shine = (Float) x.getAnimatedValue(); disc.invalidate(); });
+            a.start();
+            disc.setRotationY(3f * travel);   // leans the way it was approached, then settles flat
+            disc.animate().rotationY(0f);
+        }
         disc.invalidate();
         label.setTextColor(on ? Ui.PORCELAIN : Ui.MIST);
         long ms = animate ? Motion.ms(300) : 0;

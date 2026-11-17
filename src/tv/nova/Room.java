@@ -1,12 +1,16 @@
 package tv.nova;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.PorterDuff;
 import android.os.Handler;
 import android.view.View;
+import android.view.ViewAnimationUtils;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -14,17 +18,20 @@ import android.widget.ImageView;
 /**
  * The room behind the interface: the environment, sharp on Home; its blurred, dimmed copy
  * for every other page; and the light — on Home the room is re-lit in the colour of the app
- * under focus, and glass is re-lit with it.
+ * under focus (in the living smoke the colour spreads in from the side focus moved toward),
+ * and glass is re-lit with it.
  *
  * An artwork environment is drawn alive (LivingSmoke). A photograph, the Reduced motion
  * setting, or a GPU that cannot keep up gets the still picture instead.
  */
 final class Room implements LivingSmoke.Listener {
     private static final int FIRST_PHOTOGRAPH = 6;   // index in Env.IDS where the NASA photographs start
+    private static final int DIM = 0xff8a8a8a;       // what the blurred room is multiplied by on pages other than Home
 
     private final ImageView sharp, dimmed;
     private final LivingSmoke smoke;
     private boolean smokeTooSlow, smokeAlive, watching;
+    private int spreadFrom;   // 1 or -1 while the next relight should spread in from the right or left
     private final View glassRoot;
     private final Handler ui = new Handler();
     private final float[] light = {1, 1, 1, 0}, target = {1, 1, 1, 0};   // tint r, g, b and how much of it
@@ -43,7 +50,7 @@ final class Room implements LivingSmoke.Listener {
         dimmed = new ImageView(root.getContext());
         dimmed.setScaleType(ImageView.ScaleType.FIT_XY);
         dimmed.setImageBitmap(Env.frost);
-        dimmed.setColorFilter(0xff8a8a8a, PorterDuff.Mode.MULTIPLY);
+        dimmed.setColorFilter(DIM, PorterDuff.Mode.MULTIPLY);
         dimmed.setAlpha(0f);
         root.addView(dimmed, Ui.fill());
     }
@@ -79,12 +86,8 @@ final class Room implements LivingSmoke.Listener {
         watch(watching);
     }
 
-    /** Light enters from the side focus moved toward and passes through the smoke, in the app's colour. */
-    void sweep(boolean fromRight, int accent) {
-        if (!smokeAlive || !watching) return;
-        float[] c = lightOf(accent);
-        smoke.sweep(fromRight, c[0], c[1], c[2]);
-    }
+    /** Focus has moved along Home's row: the next change of light spreads in from that side rather than arriving everywhere. */
+    void spreadNextFrom(boolean right) { spreadFrom = right ? 1 : -1; }
 
     /** Away from Home the environment falls out of focus and dims; glass keeps its light. */
     void dim(boolean on, long ms) { dimmed.animate().alpha(on ? 1f : 0f).setDuration(ms).setInterpolator(Motion.EASE).start(); }
@@ -97,11 +100,14 @@ final class Room implements LivingSmoke.Listener {
             System.arraycopy(lightOf(accent), 0, target, 0, 3);
             target[3] = 0.66f;
         }
+        int side = smokeAlive && watching && animate && target[3] > 0 ? spreadFrom : 0;
+        spreadFrom = 0;
+        smoke.light(target[0], target[1], target[2], target[3], side, !animate);
         if (relighting != null) relighting.cancel();
         final float[] from = light.clone();
         if (from[3] == 0) System.arraycopy(target, 0, from, 0, 3);   // fade the new colour in; do not pass through the old one
         if (from[3] == target[3] && from[0] == target[0] && from[1] == target[1] && from[2] == target[2]) return;
-        relighting = ValueAnimator.ofFloat(0, 1).setDuration(animate ? Motion.ms(700) : 0);
+        relighting = ValueAnimator.ofFloat(0, 1).setDuration(!animate ? 0 : side != 0 ? 1400 : Motion.ms(700));   // glass follows the spread
         relighting.setInterpolator(Motion.EASE);
         relighting.addUpdateListener(a -> {
             float t = (Float) a.getAnimatedValue();
@@ -138,25 +144,52 @@ final class Room implements LivingSmoke.Listener {
             f = new ColorMatrixColorFilter(m);
         }
         sharp.setColorFilter(f);
-        smoke.setTint(light[0], light[1], light[2], amount);
         GlassPanel.grade = f;
         redrawGlass(glassRoot);
     }
 
-    /** Change the environment. Decoding and blurring happen off the main thread; then is run when it is on screen. */
-    void use(final int index, final Runnable then) {
+    /**
+     * Change the environment. It is decoded and blurred off the main thread; then, if the dimmed room is
+     * what is on screen, the new one spreads in a soft circle from 'origin' (the card that was chosen),
+     * and glass re-frosts once it has. 'then' runs when the new environment is in place.
+     */
+    void use(final int index, final View origin, final Runnable then) {
         final int w = sharp.getWidth(), h = sharp.getHeight();
         new Thread(() -> {
-            Env.load(sharp.getContext(), index, w, h);
+            final Bitmap[] prepared = Env.prepare(sharp.getContext(), index, w, h);
+            if (prepared == null) return;
             ui.post(() -> {
-                sharp.setImageBitmap(Env.photo);
-                sharp.setVisibility(View.VISIBLE);   // until the smoke has drawn the new picture, if it will
-                smokeAlive = false;
-                smoke.setVisibility(View.GONE);
-                dimmed.setImageBitmap(Env.frost);
-                watch(watching);
-                redrawGlass(glassRoot);
-                then.run();
+                final Runnable settle = () -> {
+                    sharp.setImageBitmap(prepared[0]);
+                    sharp.setVisibility(View.VISIBLE);   // until the smoke has drawn the new picture, if it will
+                    smokeAlive = false;
+                    smoke.setVisibility(View.GONE);
+                    dimmed.setImageBitmap(prepared[1]);
+                    Env.adopt(index, prepared);
+                    watch(watching);
+                    redrawGlass(glassRoot);
+                    then.run();
+                };
+                if (origin == null || dimmed.getAlpha() < 1f || Motion.reduced) { settle.run(); return; }
+                final FrameLayout root = (FrameLayout) dimmed.getParent();
+                final ImageView incoming = new ImageView(root.getContext());
+                incoming.setScaleType(ImageView.ScaleType.FIT_XY);
+                incoming.setImageBitmap(prepared[1]);
+                incoming.setColorFilter(DIM, PorterDuff.Mode.MULTIPLY);
+                root.addView(incoming, root.indexOfChild(dimmed) + 1, Ui.fill());
+                int[] at = new int[2];
+                origin.getLocationInWindow(at);
+                int cx = at[0] + origin.getWidth() / 2, cy = at[1] + origin.getHeight() / 2;
+                Animator spread = ViewAnimationUtils.createCircularReveal(incoming, cx, cy, origin.getHeight() / 2f, (float) Math.hypot(w, h));
+                spread.setDuration(700);
+                spread.setInterpolator(Motion.EASE);
+                spread.addListener(new AnimatorListenerAdapter() {
+                    @Override public void onAnimationEnd(Animator a) {
+                        settle.run();
+                        root.removeView(incoming);
+                    }
+                });
+                spread.start();
             });
         }, "environment").start();
     }

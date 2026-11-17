@@ -1,14 +1,18 @@
 package tv.nova;
 
 import android.view.Gravity;
+import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+import java.util.ArrayList;
+import java.util.List;
 
 /** One of the five pages. A page owns its view, shows where focus is, and answers the remote while it holds focus. */
 abstract class Page {
     final Nova host;
     final Ui ui;
     final FrameLayout view;
+    private final List<View[]> rows = new ArrayList<>();   // what rises into place, row after row, when the page opens
 
     Page(Nova host) {
         this.host = host;
@@ -29,6 +33,17 @@ abstract class Page {
     /** Something this page shows may have changed (the minute, the weather, the installed apps). */
     void refresh() {}
 
+    /** The tile showing this app, if the page has one: a returning app's icon flies back to it. */
+    AppTile tileFor(Apps.App app) { return null; }
+
+    /** Name the next row of the page, top to bottom. */
+    protected void row(View... views) { rows.add(views); }
+
+    /** The page has just come on screen: its rows rise into place one after another. */
+    void enter() {
+        for (int i = 0; i < rows.size(); i++) for (View v : rows.get(i)) Motion.rise(v, i, ui.px(12));
+    }
+
     /** Page title on the left, one line of context on the right. Returns the context line. */
     protected TextView header(String title) {
         TextView t = ui.text(ui.manrope, 40, Ui.PORCELAIN);
@@ -39,6 +54,7 @@ abstract class Page {
         FrameLayout.LayoutParams l = new FrameLayout.LayoutParams(-2, -2, Gravity.END);
         l.setMargins(0, ui.px(Ui.TOP + 14), ui.px(Ui.MARGIN), 0);
         view.addView(context, l);
+        row(t, context);
         return context;
     }
 }

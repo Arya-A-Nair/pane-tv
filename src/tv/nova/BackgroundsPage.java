@@ -32,6 +32,11 @@ final class BackgroundsPage extends Page {
             ui.place(view, t.view, Ui.MARGIN + (i % COLUMNS) * (w + GAP), Ui.CONTENT_TOP + 12 + (i / COLUMNS) * pitch);
             tiles.add(t);
         }
+        for (int r = 0; r * COLUMNS < tiles.size(); r++) {
+            View[] inRow = new View[Math.min(COLUMNS, tiles.size() - r * COLUMNS)];
+            for (int i = 0; i < inRow.length; i++) inRow[i] = tiles.get(r * COLUMNS + i).view;
+            row(inRow);
+        }
         selected = Math.max(0, Env.index);
     }
 
@@ -43,11 +48,11 @@ final class BackgroundsPage extends Page {
     @Override boolean key(int k) {
         int n = tiles.size(), column = selected % COLUMNS;
         switch (k) {
-            case KeyEvent.KEYCODE_DPAD_LEFT: if (column > 0) selected--; return true;
-            case KeyEvent.KEYCODE_DPAD_RIGHT: if (column < COLUMNS - 1 && selected + 1 < n) selected++; return true;
-            case KeyEvent.KEYCODE_DPAD_UP: if (selected >= COLUMNS) selected -= COLUMNS; return true;
+            case KeyEvent.KEYCODE_DPAD_LEFT: if (column > 0) selected--; else Motion.nudge(tiles.get(selected).view, -ui.px(7), 0); return true;
+            case KeyEvent.KEYCODE_DPAD_RIGHT: if (column < COLUMNS - 1 && selected + 1 < n) selected++; else Motion.nudge(tiles.get(selected).view, ui.px(7), 0); return true;
+            case KeyEvent.KEYCODE_DPAD_UP: if (selected >= COLUMNS) selected -= COLUMNS; else Motion.nudge(tiles.get(selected).view, 0, -ui.px(7)); return true;
             case KeyEvent.KEYCODE_DPAD_DOWN: if (selected + COLUMNS >= n) return false; selected += COLUMNS; return true;
-            case KeyEvent.KEYCODE_DPAD_CENTER: host.useEnvironment(selected); return true;
+            case KeyEvent.KEYCODE_DPAD_CENTER: { final Tile t = tiles.get(selected); Motion.press(t.picture, () -> host.useEnvironment(selected, t.picture)); return true; }
             default: return false;
         }
     }

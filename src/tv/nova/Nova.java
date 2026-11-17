@@ -48,6 +48,8 @@ public class Nova extends Activity {
     private boolean idle, launching, entered;
     private long lastInput = SystemClock.uptimeMillis();
     private int minuteShown = -1;
+    private ImageView launchedIcon;   // the icon at the centre of the screen while its app is open, to fly home on return
+    private Apps.App launchedApp;
     private static boolean dryRun;   // test hook: launches play their animation but open nothing
 
     @Override protected void onCreate(Bundle saved) {
@@ -95,7 +97,7 @@ public class Nova extends Activity {
             pages[i].view.setVisibility(i == page ? View.VISIBLE : View.GONE);
             pages[i].focus(i == page && !onBar, animate);
         }
-        bar.show(onBar ? barItem : -1, page);
+        bar.show(page, onBar, animate);
         room.relight(page == HOME && !idle ? home.accent() : null, animate);
         room.watch(page == HOME || idle);
     }
@@ -104,13 +106,9 @@ public class Nova extends Activity {
         if (target == page) return;
         page = target;
         if (page == APPS) appsPage.fill();   // pick up what was added to or taken off Home
-        View v = pages[page].view;
-        v.setAlpha(0f);
-        v.setTranslationY(ui.px(12));
-        showFocus(false);
+        showFocus(true);
         room.dim(page != HOME, Motion.ms(450));
-        v.animate().alpha(1f).translationY(0).setDuration(Motion.ms(420)).setInterpolator(Motion.GLIDE)
-                .setUpdateListener(a -> Room.redrawGlass(pages[page].view)).start();
+        pages[page].enter();
     }
 
     /** Go to a page and put focus in it. */
@@ -128,19 +126,16 @@ public class Nova extends Activity {
         show(HOME);
     }
 
-    /** Focus moved along Home's row: light follows it in from that side. */
-    void lightFrom(boolean right) { Integer accent = home.accent(); if (accent != null) room.sweep(right, accent); }
+    /** Focus moved along Home's row: the new app's light will come in from that side. */
+    void lightFrom(boolean right) { room.spreadNextFrom(right); }
 
     /** The favourites changed: Home's row must follow. */
     void homeChanged() { home.fillRow(); }
 
-    void useEnvironment(int index) {
+    /** origin is the card that was chosen, which the new environment spreads from; null to simply switch. */
+    void useEnvironment(int index, View origin) {
         prefs.edit().putString("env", Env.IDS[index]).apply();
-        room.use(index, () -> {
-            stage.setAlpha(0.6f);
-            stage.animate().alpha(1f).setDuration(Motion.ms(500)).start();
-            showFocus(true);
-        });
+        room.use(index, origin, () -> showFocus(true));
     }
 
     private void refreshPages() { for (Page p : pages) p.refresh(); }
@@ -157,8 +152,10 @@ public class Nova extends Activity {
 
         if (k == KeyEvent.KEYCODE_BACK) goHome();
         else if (onBar) {
-            if (k == KeyEvent.KEYCODE_DPAD_LEFT) barItem = Math.max(0, barItem - 1);
-            else if (k == KeyEvent.KEYCODE_DPAD_RIGHT) barItem = Math.min(pages.length - 1, barItem + 1);
+            boolean left = k == KeyEvent.KEYCODE_DPAD_LEFT, right = k == KeyEvent.KEYCODE_DPAD_RIGHT;
+            if ((left && barItem == 0) || (right && barItem == pages.length - 1)) Motion.nudge(bar.view, ui.px(left ? -6 : 6), 0);
+            else if (left) barItem--;
+            else if (right) barItem++;
             else if (k == KeyEvent.KEYCODE_DPAD_UP || k == KeyEvent.KEYCODE_DPAD_CENTER) onBar = !pages[barItem].selectable();
             else if (k == KeyEvent.KEYCODE_MENU) { open(SETTINGS); return true; }
             show(barItem);   // pages follow the bar, like tabs
@@ -187,6 +184,8 @@ public class Nova extends Activity {
         veil.setAlpha(0f);
         launchLayer.addView(veil, Ui.fill());
         ImageView icon = new ImageView(this);
+        launchedIcon = icon;
+        launchedApp = app;
         icon.setImageBitmap(app.round);
         launchLayer.addView(icon, new FrameLayout.LayoutParams((int) size, (int) size));
         icon.setX(at[0] + ring);
@@ -218,12 +217,29 @@ public class Nova extends Activity {
     }
 
     private void returnFromApp() {
-        launchLayer.removeAllViews();
+        final ImageView icon = launching ? launchedIcon : null;
+        final Apps.App app = launchedApp;
         if (launching) {   // back from an app: what was just watched comes first
             home.fillRow();
             home.focusLastWatched();
         }
         launching = false;
+        launchedIcon = null;
+        if (icon == null || Motion.reduced) launchLayer.removeAllViews();
+        else {
+            // the reverse of the launch: the icon shrinks back into its own place as the room returns
+            for (int i = 0; i < launchLayer.getChildCount(); i++) if (launchLayer.getChildAt(i) != icon) launchLayer.getChildAt(i).animate().alpha(0f).setDuration(260).start();
+            root.post(() -> {
+                AppTile tile = pages[page].tileFor(app);
+                if (tile == null) { launchLayer.removeAllViews(); return; }
+                int[] at = new int[2];
+                tile.disc.getLocationInWindow(at);
+                float ring = ui.px(AppTile.RING_ROOM) * tile.disc.getScaleX(), size = tile.disc.getWidth() * tile.disc.getScaleX() - 2 * ring;
+                float shrink = size / icon.getWidth();
+                icon.animate().x(at[0] + ring + (size - icon.getWidth()) / 2).y(at[1] + ring + (size - icon.getHeight()) / 2).scaleX(shrink).scaleY(shrink)
+                        .setDuration(450).setInterpolator(Motion.GLIDE).withEndAction(launchLayer::removeAllViews).start();
+            });
+        }
         stage.setAlpha(0f);
         stage.setScaleX(1.02f);
         stage.setScaleY(1.02f);
@@ -349,7 +365,7 @@ public class Nova extends Activity {
         if (i.hasExtra("now")) SkyArc.testNow = i.getIntExtra("now", -1);
         if (i.hasExtra("noweather")) Weather.testOffline = i.getBooleanExtra("noweather", false);
         refreshPages();
-        if (i.hasExtra("env")) useEnvironment(Env.indexOf(i.getStringExtra("env")));
+        if (i.hasExtra("env")) useEnvironment(Env.indexOf(i.getStringExtra("env")), null);
         if (i.hasExtra("page")) {
             barItem = i.getIntExtra("page", HOME);
             onBar = !i.hasExtra("sel");

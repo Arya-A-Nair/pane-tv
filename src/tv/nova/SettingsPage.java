@@ -63,7 +63,9 @@ final class SettingsPage extends Page {
             lp.setMargins(ui.px(INSET), ui.px(INSET + 3 + i * ROW_HEIGHT), ui.px(INSET), 0);
             list.addView(rows.get(i).view, lp);
         }
-        ui.place(view, facts(), Ui.MARGIN + LIST_WIDTH + 56, Ui.CONTENT_TOP + INSET + 16);
+        LinearLayout facts = facts();
+        ui.place(view, facts, Ui.MARGIN + LIST_WIDTH + 56, Ui.CONTENT_TOP + INSET + 16);
+        row(list, facts);
     }
 
     private Runnable open(final String action) {
@@ -110,11 +112,14 @@ final class SettingsPage extends Page {
     }
 
     @Override boolean key(int k) {
-        if (k == KeyEvent.KEYCODE_DPAD_UP) selected = Math.max(0, selected - 1);
+        if (k == KeyEvent.KEYCODE_DPAD_UP) { if (selected > 0) selected--; else Motion.nudge(rows.get(0).view, 0, -ui.px(6)); }
         else if (k == KeyEvent.KEYCODE_DPAD_DOWN) { if (selected == rows.size() - 1) return false; selected++; }
         else if (k == KeyEvent.KEYCODE_DPAD_CENTER) {
-            Row row = rows.get(selected);
-            if (row.value != null || !host.opensNothing()) row.action.run();
+            final Row row = rows.get(selected);
+            Motion.press(row.view, () -> {
+                if (row.value != null || !host.opensNothing()) row.action.run();
+                row.show(true);
+            });
         } else return false;
         return true;
     }

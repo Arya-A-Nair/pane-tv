@@ -28,9 +28,14 @@ final class Env {
         return 0;
     }
 
-    /** Load environment i at screen size, and build its frost. */
+    /** Load environment i at screen size and make it the current one. For start-up; changing later goes through prepare and adopt. */
     static void load(Context c, int i, int w, int h) {
-        if (i == index && photo != null) return;
+        Bitmap[] made = prepare(c, i, w, h);
+        if (made != null) adopt(i, made);
+    }
+
+    /** Decode environment i and build its frost, without touching what is on screen. Slow: call off the main thread. Null if it cannot be read. */
+    static Bitmap[] prepare(Context c, int i, int w, int h) {
         try {
             BitmapFactory.Options o = new BitmapFactory.Options();
             o.inPreferredConfig = Bitmap.Config.ARGB_8888;
@@ -40,13 +45,20 @@ final class Env {
             Bitmap small = Bitmap.createScaledBitmap(scaled, Math.max(8, w / FROST_SCALE), Math.max(8, h / FROST_SCALE), true);
             Bitmap f = tone(blur(small, 7));
             small.recycle();
-            Bitmap oldPhoto = photo, oldFrost = frost;
-            photo = scaled;
-            frost = f;
-            index = i;
-            if (oldPhoto != null) oldPhoto.recycle();
-            if (oldFrost != null) oldFrost.recycle();
-        } catch (Exception ignored) { }
+            return new Bitmap[]{scaled, f};
+        } catch (java.io.IOException missing) {
+            return null;
+        }
+    }
+
+    /** Make a prepared environment the current one. The caller must already have stopped showing the old bitmaps. */
+    static void adopt(int i, Bitmap[] prepared) {
+        Bitmap oldPhoto = photo, oldFrost = frost;
+        photo = prepared[0];
+        frost = prepared[1];
+        index = i;
+        if (oldPhoto != null) oldPhoto.recycle();
+        if (oldFrost != null) oldFrost.recycle();
     }
 
     private static final float[] LIN = new float[256];

@@ -1,5 +1,6 @@
 package tv.nova;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -74,6 +75,7 @@ final class SkyArc extends View {
     Reading update(String sunrise, String sunset, double latitude, double longitude) {
         int rise = minutes(sunrise), set = minutes(sunset), now = minuteNow();
         int was = mode;
+        float from = progress;
         Reading reading;
         if (rise < 0 || set <= rise) {
             mode = UNKNOWN;
@@ -92,6 +94,14 @@ final class SkyArc extends View {
         if (mode != was && was != UNKNOWN) {   // sunset and sunrise: one sky gives way to the other
             setAlpha(0f);
             animate().alpha(1f).setDuration(Motion.ms(900)).start();
+        }
+        if (mode == was && mode != UNKNOWN && from != progress && isShown() && !Motion.reduced) {   // glide along the path rather than jump
+            final float to = progress;
+            progress = from;
+            ValueAnimator glide = ValueAnimator.ofFloat(from, to).setDuration(450);
+            glide.setInterpolator(Motion.GLIDE);
+            glide.addUpdateListener(a -> { progress = (Float) a.getAnimatedValue(); invalidate(); });
+            glide.start();
         }
         invalidate();
         return reading;

@@ -155,14 +155,29 @@ colour sits halfway between "same brightness" and the pure hue, so red stays cri
 of turning pink. Glass is re-lit with it. Photographs are never re-lit (a pink Earth is
 wrong), and on every other page, and when idle, the room is in its own colours.
 
-**The smoke is alive.** An artwork environment is drawn by `LivingSmoke`: the same still, one
-texel to one pixel, with every point drifting up to 9 px along a slow, smooth flow (periods of
-half a minute and more), so it never quite holds still and is never softer than the still.
-When focus moves along Home's row, a soft band of light in the new app's colour enters from
-the side focus moved toward and crosses in 1.5 s — brighter where the smoke is dense, so it
-reads as light scattering, not a wipe — and fades as the room settles into the new colour.
-It is the only thing that moves on its own. Photographs, the Reduced motion setting, and a
-GPU that cannot hold 30 fps all get the still instead.
+**The smoke is alive.** On an artwork environment, Home and the screensaver are drawn by
+`LivingSmoke`, and what is on screen is real, evolving smoke rather than a picture of it:
+
+- **Density** is fractal noise warped by fractal noise, twice over, every layer sliding at its
+  own slow rate, the whole body turning about the light and drifting up and across. Shapes
+  curl, thin and re-form; they do not just slide. It is calm — watchable for minutes — and it
+  never stops.
+- **Colour and light come from the environment.** A blurred copy of the still supplies each
+  environment's palette, where its light is, and its dark areas (so the contrast rules above
+  still hold: measured at 6:1 or better on Home in all six). The density shapes it: faces
+  toward the light are picked out, thin gaps stay deep, and a little of the still's grain is
+  laid over so it never reads as a low-resolution effect.
+- **A change of app spreads like dye in oil.** When focus moves along Home's row the new
+  app's colour enters at the side focus moved toward and takes over the screen in about two
+  seconds. Its edge is carried by the smoke's own currents, so it billows, sends tendrils ahead
+  and leaves pockets behind; it is most vivid just inside its edge; and the old colour stays
+  exactly as it was until it is overtaken. There is no dimming and no wipe. Moving again
+  starts a new spread over whatever mixture is on screen.
+
+It is the only thing that moves on its own. It is drawn at 720p (smoke is soft; the density
+itself at 320 x 180) and scaled by the display, at 30 fps, in about 10 ms a frame on the
+Stick. Photographs, the Reduced motion setting, and a GPU that cannot keep up all get the
+still instead.
 
 ### Glass
 
@@ -224,19 +239,29 @@ visibly not the focus.
 
 ## 8. Motion
 
-Restrained, damped, never bouncing. All durations x0.6 when Motion is set to Reduced.
+Restrained and damped. Small motions in small places; nothing decorative.
 
 | Motion | Duration | Curve |
 |---|---|---|
 | Focus (scale, lift, name) | 300 ms | Spring, damping 0.86 (`Motion.FOCUS`) — settles with no visible overshoot |
-| Focus ring / control fill | immediate to 160 ms | linear |
-| Hero text change | 110 ms out, 380 ms in, 10 dp slide | `Motion.GLIDE` (damping 0.98) |
-| Room re-light | 700 ms | ease-out quint (`Motion.EASE`) |
-| Page change | 420 ms, 12 dp rise; room dims over 450 ms | `GLIDE` / `EASE` |
-| Launch | 520 ms: the icon glides to centre at 112 dp, the name appears beneath in Manrope Light, the room fades to Obsidian; the app opens 260 ms later | `GLIDE` / `EASE` |
-| Return | 600 ms fade from 1.02x | `GLIDE` |
-| Idle | interface fades over 1.4 s; the environment drifts in by 8 % over three minutes | linear |
-| First appearance | each block rises 14 dp, 80 ms apart, 800 ms | `GLIDE` |
+| An icon gains focus | 450 ms, once | A soft diagonal highlight crosses it, clipped to the circle; it leans 3° the way focus came from and settles flat |
+| Press (OK) | 90 ms in, 260 ms out | The icon, row or picture gives to 96 %, the action fires, it springs back (the one place a little bounce is right) |
+| Nothing further that way | 90 ms + 300 ms | The focused thing leans up to 7 dp toward the edge and returns |
+| Bar selection | 300 ms | One pill glides from name to name, changing width as it goes (`GLIDE`) |
+| Hero change | 220 ms out, 380 ms in, 8 dp slide | Old and new overlap, so the hero is never empty; the context line follows 60 ms behind |
+| Room re-light | about 2 s | The new colour spreads through the smoke from the side focus moved toward; glass follows over 1.4 s |
+| A figure changes (time, temperature, air index) | 380 ms | Only the characters that changed roll: the old slides up and fades, the new rises in |
+| Sun and moon each minute | 450 ms | They glide along the path to their new place |
+| Page opens | 420 ms, 12 dp rise | Rows arrive 40 ms apart, top to bottom; the room dims over 450 ms |
+| New environment | 700 ms | It spreads in a soft circle from the chosen picture; glass re-frosts when it has |
+| Launch | 520 ms | The icon glides to centre at 112 dp, the name appears beneath in Manrope Light, the room fades to Obsidian; the app opens 260 ms later |
+| Return from an app | 450 ms | The reverse: the icon shrinks back into its own place in the row as the room returns |
+| Idle | 1.4 s out | The interface fades; the environment pushes in by 8 % over three minutes |
+| First appearance | 800 ms | Each block of Home rises 14 dp, 80 ms apart |
+
+Every one of these answers something the viewer did or a real change, and plays once. They
+live in `Motion` (press, nudge, rise) and in the component they belong to. With Motion set
+to Reduced they are skipped and the smoke is still.
 
 Nothing in the interface loops, pulses or glows while the screen is in use; only the smoke behind it drifts.
 
@@ -373,7 +398,7 @@ brings everything back.
 | `Ui` | The tokens above (colour, space, type) and the helpers every screen builds with |
 | `Nova` | The activity: focus, the remote, launching, going idle |
 | `Page` and `HomePage`, `AppsPage`, `TodayPage`, `BackgroundsPage`, `SettingsPage` | One class per page |
-| `BottomBar`, `AppTile`, `Screensaver`, `SkyArc` | Components |
+| `BottomBar`, `AppTile`, `Screensaver`, `SkyArc`, `RollingText` | Components |
 | `Room`, `LivingSmoke`, `Env`, `GlassPanel` | Materials: the environment, its motion and its light, the frost, glass |
 | `Motion` | The curves and the Reduced setting |
 | `Apps`, `Weather`, `Moon`, `MoonPath` | Data. `MoonPath` has a self-check: `java -cp out/classes tv.nova.MoonPath` |
