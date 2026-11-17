@@ -10,6 +10,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -75,7 +76,7 @@ final class BackgroundsPage extends Page {
             image.setClipToOutline(true);
             image.setElevation(ui.px(6));
             try { image.setImageBitmap(Env.decode(host, index, ui.px(widthDp), ui.px(widthDp * 9 / 16f))); }
-            catch (java.io.IOException ignored) { }   // a missing picture leaves an empty tile
+            catch (IOException ignored) { }   // a missing picture leaves an empty tile
             picture.addView(image, Ui.fill());
             picture.addView(outline(CORNER, Math.max(1, ui.px(0.75f)), 0x33ffffff), Ui.fill());
             ring = outline(CORNER + 5, ui.px(2.5f), Ui.PORCELAIN);

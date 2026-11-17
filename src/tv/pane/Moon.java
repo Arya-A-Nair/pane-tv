@@ -3,6 +3,8 @@ package tv.pane;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import java.io.IOException;
+import java.io.InputStream;
 
 /** Tonight's moon: its phase from the synodic month, and a picture of it rendered from NASA's surface map. */
 final class Moon {
@@ -26,13 +28,18 @@ final class Moon {
      */
     static Bitmap render(Context ctx, int size, double age) {
         Bitmap b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-        Bitmap map;
         // The map is 2048 x 1024; the disc shows half its width. Skip texels the disc is too small to show.
         BitmapFactory.Options o = new BitmapFactory.Options();
         int sample = 1;
         while (sample < 8 && 1024 / (sample * 2) >= size) sample *= 2;
         o.inSampleSize = sample;
-        try { map = BitmapFactory.decodeStream(ctx.getAssets().open("moon.jpg"), null, o); } catch (Exception e) { return b; }
+        Bitmap map;
+        try (InputStream in = ctx.getAssets().open("moon.jpg")) {
+            map = BitmapFactory.decodeStream(in, null, o);
+        } catch (IOException missing) {
+            return b;   // no map: an empty disc rather than a crash
+        }
+        if (map == null) return b;
         int mw = map.getWidth(), mh = map.getHeight();
         int[] tex = new int[mw * mh];
         map.getPixels(tex, 0, mw, 0, 0, mw, mh);

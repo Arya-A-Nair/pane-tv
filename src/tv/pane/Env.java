@@ -3,6 +3,8 @@ package tv.pane;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * The environment: a full-resolution still behind everything, and "frost" — a small, heavily
@@ -44,7 +46,7 @@ final class Env {
             Bitmap f = tone(blur(small, 7));
             small.recycle();
             return new Bitmap[]{scaled, f};
-        } catch (java.io.IOException missing) {
+        } catch (IOException missing) {
             return null;
         }
     }
@@ -53,11 +55,11 @@ final class Env {
      * Decode environment i at the smallest power-of-two downsample that is still at least w x h. The pictures are 4K:
      * a 1080p screen decodes them at half size (the same memory as a 1080p picture), a 4K screen at full size.
      */
-    static Bitmap decode(Context c, int i, int w, int h) throws java.io.IOException {
+    static Bitmap decode(Context c, int i, int w, int h) throws IOException {
         String path = "env/" + IDS[i] + ".jpg";
         BitmapFactory.Options o = new BitmapFactory.Options();
         o.inJustDecodeBounds = true;
-        java.io.InputStream in = c.getAssets().open(path);
+        InputStream in = c.getAssets().open(path);
         try { BitmapFactory.decodeStream(in, null, o); } finally { in.close(); }
         int sample = 1;
         while (o.outWidth / (sample * 2) >= w && o.outHeight / (sample * 2) >= h) sample *= 2;
@@ -67,7 +69,7 @@ final class Env {
         in = c.getAssets().open(path);
         try {
             Bitmap b = BitmapFactory.decodeStream(in, null, o);
-            if (b == null) throw new java.io.IOException(path);
+            if (b == null) throw new IOException(path);
             return b;
         } finally { in.close(); }
     }
