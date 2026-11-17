@@ -9,7 +9,6 @@
 A free, open-source home screen for Amazon Fire TV and Android TV. No ads, no accounts, no tracking.
 
 [![Latest release](https://img.shields.io/github/v/release/Arya-A-Nair/pane-tv?style=for-the-badge&color=a4b8ee&label=release)](https://github.com/Arya-A-Nair/pane-tv/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/Arya-A-Nair/pane-tv/total?style=for-the-badge&color=b4a28c)](https://github.com/Arya-A-Nair/pane-tv/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-e9ecf2?style=for-the-badge)](LICENSE)
 
 [**Download the APK**](https://github.com/Arya-A-Nair/pane-tv/releases/latest/download/pane.apk) · [Install in one command](#install) · [Watch the video](#see-it-move)
