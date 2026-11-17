@@ -7,6 +7,10 @@ on:
   push:
     branches: [main]
     paths: [AndroidManifest.xml]
+  # Merges made by GitHub auto-merge (enabled with GITHUB_TOKEN) don't fire push
+  # workflows, so also check once a day.
+  schedule:
+    - cron: '17 3 * * *'
   workflow_dispatch:
 
 permissions:
