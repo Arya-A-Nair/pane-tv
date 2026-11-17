@@ -1,0 +1,17 @@
+name: Label PRs
+
+# pull_request_target is safe here: no checkout, no PR code runs. The action only
+# reads the changed-file list via the API and the config from the base branch.
+on: pull_request_target
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/labeler@v5
+        with:
+          sync-labels: true

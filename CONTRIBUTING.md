@@ -23,3 +23,22 @@ PANE_TV=192.168.1.50 ./deploy.sh   # installs on your TV over adb
 ## Pull requests
 
 Open an issue first for anything big. Update `CHANGELOG.md` under `[Unreleased]` for user-visible changes.
+
+**CI must pass before merge.** Every PR runs `build` (compiles with `-Xlint:all -Werror`, so new warnings fail; runs the `MoonPath` self-check; fails if the APK grows more than 15% vs `main`) and `lint` (shellcheck, actionlint, ruff, `tools/check_assets.py`). Run the same locally with:
+
+```sh
+JAVAC_FLAGS="-Xlint:all,-options -Werror" ./build.sh && java -cp out/classes tv.pane.MoonPath
+```
+
+A code-owner review is also required on `main`.
+
+### Testing a PR build
+
+CI uploads each PR's APK as the `pane-apk` artifact (kept 14 days). Download it from the run's summary page, unzip, then:
+
+```sh
+adb connect <tv-ip>
+adb install -r pane.apk
+```
+
+It is signed with a throwaway key, so if a release Pane is installed, uninstall it first (`adb uninstall tv.pane`; check the package id in `AndroidManifest.xml`). The adb test extras (see the source for the list) only work on this debug build, never on release builds.
