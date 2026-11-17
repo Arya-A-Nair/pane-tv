@@ -19,15 +19,11 @@ import org.json.JSONObject;
 final class Weather {
     interface Listener { void onWeather(Weather w); }
 
-    // scene ids shared with the shader
-    static final int CLEAR = 0, CLOUDY = 1, RAIN = 2, STORM = 3, FOG = 4, SNOW = 5;
-
     String city = "";
     double lat = 19.07, lon = 72.88;
-    float temp, hi, lo, wind;
-    int code, scene, aqi = -1;
+    float temp, hi, lo;
+    int code, aqi = -1;
     String sunrise = "", sunset = "";
-    float tonight;
     boolean day = true, ok;
     float[] hourly = new float[12];
     int startHour;
@@ -56,7 +52,7 @@ final class Weather {
             JSONObject loc = new JSONObject(get("http://ip-api.com/json/?fields=status,city,lat,lon"));
             if (!"success".equals(loc.optString("status"))) return;
             String url = String.format(Locale.US, "https://api.open-meteo.com/v1/forecast?latitude=%.3f&longitude=%.3f"
-                    + "&current=temperature_2m,weather_code,is_day,wind_speed_10m&hourly=temperature_2m"
+                    + "&current=temperature_2m,weather_code,is_day&hourly=temperature_2m"
                     + "&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&forecast_days=2&timezone=auto",
                     loc.getDouble("lat"), loc.getDouble("lon"));
             JSONObject f = new JSONObject(get(url));
@@ -82,7 +78,6 @@ final class Weather {
         temp = (float) cur.getDouble("temperature_2m");
         code = cur.getInt("weather_code");
         day = cur.optInt("is_day", 1) == 1;
-        wind = (float) cur.optDouble("wind_speed_10m", 0);
         JSONObject d = f.getJSONObject("daily");
         hi = (float) d.getJSONArray("temperature_2m_max").getDouble(0);
         lo = (float) d.getJSONArray("temperature_2m_min").getDouble(0);
@@ -94,26 +89,27 @@ final class Weather {
         startHour = Integer.parseInt(now.substring(11, 13));
         int base = startHour; // hourly array starts at 00:00 today
         for (int i = 0; i < hourly.length; i++) hourly[i] = (float) t.optDouble(Math.min(base + i, t.length() - 1), temp);
-        scene = sceneFor(code);
-        tonight = (float) t.optDouble(Math.min(24, t.length() - 1), temp); // midnight
     }
 
-    /** Plain advice for the air, or null when it is fine. */
-    String airAdvice() {
-        if (aqi < 0) return null;
-        if (aqi <= 50) return "Air quality is good at " + aqi + ".";
-        if (aqi <= 100) return "Air quality is moderate at " + aqi + ".";
-        if (aqi <= 150) return "Air is unhealthy for sensitive people at " + aqi + ".";
-        return "Air quality is unhealthy at " + aqi + ". Keep the windows shut.";
-    }
+    // ---- air quality (US AQI), in six steps from good to hazardous
+    static final String[] AIR_NAME = {"Good", "Moderate", "Poor", "Unhealthy", "Very unhealthy", "Hazardous"};
+    static final String[] AIR_NOTE = {"A good day for open windows", "Fine for most people", "Hard on sensitive lungs", "Keep the windows shut", "Stay indoors if you can", "Stay indoors"};
+    static int airLevel(int aqi) { return aqi <= 50 ? 0 : aqi <= 100 ? 1 : aqi <= 150 ? 2 : aqi <= 200 ? 3 : aqi <= 300 ? 4 : 5; }
 
-    static int sceneFor(int c) {
-        if (c >= 95) return STORM;
-        if (c >= 71 && c <= 77 || c == 85 || c == 86) return SNOW;
-        if (c >= 51 && c <= 67 || c >= 80 && c <= 82) return RAIN;
-        if (c == 45 || c == 48) return FOG;
-        if (c >= 2) return CLOUDY;
-        return CLEAR;
+    // Test overrides, set only from adb (see Nova.handleTestExtras).
+    static int testAqi = Integer.MIN_VALUE;
+    static boolean testOffline;
+
+    /** True once there is a reading to show. */
+    boolean ready() { return ok && !testOffline; }
+
+    /** The air index, or -1 when there is none. */
+    int air() { return !ready() ? -1 : testAqi != Integer.MIN_VALUE ? testAqi : aqi; }
+
+    /** One line for the screensaver: "29°  Clear night  ·  Unhealthy air". Empty before the first reading. */
+    String summary() {
+        if (!ready()) return "";
+        return Math.round(temp) + "°  " + describe() + (air() > 150 ? "  ·  " + AIR_NAME[airLevel(air())] + " air" : "");
     }
 
     String describe() {

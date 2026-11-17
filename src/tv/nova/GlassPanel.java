@@ -55,7 +55,7 @@ class GlassPanel extends FrameLayout {
             grainTile = Bitmap.createBitmap(px, n, n, Bitmap.Config.ARGB_8888);
         }
         grain.setShader(new BitmapShader(grainTile, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT));
-        fill.setColor(Nova.PORCELAIN);
+        fill.setColor(Ui.PORCELAIN);
     }
 
     void setSolid(float s) { if (s != solid) { solid = s; invalidate(); } }

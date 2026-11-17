@@ -25,7 +25,7 @@ final class SunArc extends View {
     private final Path arc = new Path(), done = new Path();
     private final float dp;
     private String rise = "", set = "";
-    static int nowOverride = -1; // minutes since midnight, for testing states
+    static int testNow = -1;   // minutes since midnight; set only from adb to show other times of day
 
     SunArc(Context c, float dp, Typeface text) {
         super(c);
@@ -43,7 +43,7 @@ final class SunArc extends View {
         core.setColor(0xfffff4e2);
         time.setTypeface(text);
         time.setTextSize(15 * dp);
-        time.setColor(Nova.PORCELAIN);
+        time.setColor(Ui.PORCELAIN);
     }
 
     void set(String sunrise, String sunset) { rise = sunrise; set = sunset; invalidate(); }
@@ -54,7 +54,7 @@ final class SunArc extends View {
     }
 
     private static int now() {
-        if (nowOverride >= 0) return nowOverride;
+        if (testNow >= 0) return testNow;
         Calendar cal = Calendar.getInstance();
         return cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE);
     }
@@ -63,6 +63,9 @@ final class SunArc extends View {
         int h = m / 60, mm = m % 60;
         return h > 0 ? (mm > 0 ? h + " h " + mm + " min" : h + " h") : mm + " min";
     }
+
+    /** True outside the hours between the two "HH:mm" times. */
+    static boolean isNight(String sunrise, String sunset) { int n = now(); return n < minutes(sunrise) || n > minutes(sunset); }
 
     /** {amount, what it is}: "5 h 12 min", "of daylight left" — or the wait until sunrise. Null before data. */
     String[] summary() {
@@ -94,7 +97,7 @@ final class SunArc extends View {
             pm.getSegment(0, len * f, done, true);
             float[] pos = new float[2];
             pm.getPosTan(len * f, pos, null);
-            past.setShader(new LinearGradient(x0, 0, Math.max(x0 + 1, pos[0]), 0, Nova.CHAMPAGNE, 0xffe8d5bc, Shader.TileMode.CLAMP));
+            past.setShader(new LinearGradient(x0, 0, Math.max(x0 + 1, pos[0]), 0, Ui.CHAMPAGNE, 0xffe8d5bc, Shader.TileMode.CLAMP));
             c.drawPath(done, past);
             if (day) {
                 halo.setShader(new RadialGradient(pos[0], pos[1], 15 * dp, new int[]{0x70f2dcb8, 0x24b4a28c, 0x00b4a28c}, new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP));

@@ -18,19 +18,13 @@ final class Motion {
         };
     }
 
-    static final TimeInterpolator FOCUS = spring(0.86f);   // dock/library focus
-    static final TimeInterpolator GLIDE = spring(0.98f);   // large surfaces: panels, sheets
+    static final TimeInterpolator FOCUS = spring(0.86f);   // focus: scale, lift
+    static final TimeInterpolator GLIDE = spring(0.98f);   // large moves: pages, the hero, launch
     static final TimeInterpolator EASE = new TimeInterpolator() { // ease-out quint for fades
         public float getInterpolation(float t) { float u = 1 - t; return 1 - u * u * u * u * u; }
     };
 
-    /** Global motion scale: 1 = full, 0.55 = reduced (shorter, no parallax). */
-    static float scale = 1f;
-    static long ms(long base) { return (long) (base * (scale < 1f ? 0.6f : 1f)); }
-
-    static int lerpColor(int a, int b, float t) {
-        int ar = (a >> 16) & 255, ag = (a >> 8) & 255, ab = a & 255;
-        int br = (b >> 16) & 255, bg = (b >> 8) & 255, bb = b & 255;
-        return 0xff000000 | ((int) (ar + (br - ar) * t) << 16) | ((int) (ag + (bg - ag) * t) << 8) | (int) (ab + (bb - ab) * t);
-    }
+    /** Set from Settings: every duration is shortened to 60 %. */
+    static boolean reduced;
+    static long ms(long base) { return reduced ? base * 6 / 10 : base; }
 }

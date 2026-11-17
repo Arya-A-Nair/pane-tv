@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
@@ -19,17 +18,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Installed apps with real banners, an accent colour sampled from each banner, and usage history. */
+/** Installed apps: a round icon and an accent colour for each, the mark from its TV banner, the favourites shown on Home, and when each was last opened. */
 final class Apps {
     static final class App {
-        String pkg, label, version;
+        String pkg, label;
         Intent launch;
-        Bitmap logo;        // the mark alone, lifted off its banner background; null when the banner is not a clean mark
-        float logoSharp;    // widest the logo can be shown (px) before it is being enlarged
-        Bitmap round;       // visionOS-style circular icon, from the app's highest-resolution icon
-        int world;          // WATCH, LISTEN or EXPLORE
+        Bitmap round;       // circular icon, from the app's highest-resolution icon
         int accent;         // dominant vivid colour of the banner
-        long installed;
+        // Filled by loadMark, on first need:
+        Bitmap logo;        // the mark alone, lifted off the banner's background; null when the banner is not a clean mark
+        float logoSharp;    // widest the logo can be shown (px) before it is being enlarged
+        private ResolveInfo info;
+        private boolean markLoaded;
     }
 
     // Shown first on a fresh install, in this order, if present.
@@ -38,21 +38,22 @@ final class Apps {
             "com.zee5.amazon", "com.onemainstream.sonyliv.android", "com.jio.media.stb.ondemand",
             "com.mxtech.videoplayer.television");
     // Never shown: ourselves and launcher plumbing.
-    static final List<String> HIDDEN = Arrays.asList("tv.nova", "tv.homeredirect",
+    static final List<String> HIDDEN = Arrays.asList("tv.nova",
             "tv.projectivy.plugin.wallpaperprovider.overflight", "com.amazon.tv.launcher", "com.amazon.ftv.profilepicker",
             "com.amazon.ftv.screensaver", "com.amazon.hedwig", "com.amazon.ssm", "com.amazon.vizzini.ftvcds",
             "com.android.documentsui", "com.android.providers.downloads.ui");
 
-    static final int BANNER_W = 960, BANNER_H = 540;
+    static final int MARK_W = 960, MARK_H = 540;   // the size banners are drawn at when a mark is lifted from them
     static final int HOME_SLOTS = 6; // favourites shown on Home; the rest stay one page away
 
     final List<App> all = new ArrayList<>();
     final Map<String, App> byPkg = new HashMap<>();
     private final SharedPreferences prefs;
+    private final PackageManager pm;
 
     Apps(Context ctx) {
         prefs = ctx.getSharedPreferences("nova", Context.MODE_PRIVATE);
-        PackageManager pm = ctx.getPackageManager();
+        pm = ctx.getPackageManager();
         List<ResolveInfo> found = new ArrayList<>();
         found.addAll(pm.queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0));
         found.addAll(pm.queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0));
@@ -66,19 +67,11 @@ final class Apps {
             if (li == null) li = pm.getLaunchIntentForPackage(pkg);
             if (li == null) continue;
             a.launch = li.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-            try {
-                PackageInfo pi = pm.getPackageInfo(pkg, 0);
-                a.version = pi.versionName != null && pi.versionName.matches("^\\d.*") ? pi.versionName.split("[ -]")[0] : null;
-                a.installed = pi.firstInstallTime > 1420070400000L ? pi.firstInstallTime : 0; // ignore system-image dates
-            } catch (PackageManager.NameNotFoundException ignored) { }
-            float[] detail = new float[1];
-            Bitmap banner = banner(pm, ri.activityInfo.applicationInfo, ri, detail);
-            a.accent = accent(banner);
-            a.logo = logo(banner);
-            if (a.logo != null) a.logoSharp = a.logo.getWidth() * detail[0] * 1.2f;
-            banner.recycle();
-            a.round = round(pm, ri, a);
-            a.world = worldOf(pkg, a.label);
+            a.info = ri;
+            Bitmap small = banner(ri, 96, 54, null);
+            a.accent = accent(small);
+            small.recycle();
+            a.round = round(ri, a);
             all.add(a);
             byPkg.put(pkg, a);
         }
@@ -88,31 +81,64 @@ final class Apps {
     }
 
     /**
-     * The app's TV banner at the highest density it ships (else its icon on a plate), drawn at 960x540.
-     * detail[0] receives how much real detail that holds: 1 when the source is at least that big.
+     * Lift the app's mark off its TV banner, for the hero on Home. This takes about 170 ms on the
+     * stick, so it is not done for every app at start: Home warms its own row in the background.
      */
-    private static Bitmap banner(PackageManager pm, ApplicationInfo ai, ResolveInfo ri, float[] detail) {
-        Bitmap b = Bitmap.createBitmap(BANNER_W, BANNER_H, Bitmap.Config.ARGB_8888);
+    void loadMark(App a) {
+        synchronized (a) {
+            if (a.markLoaded) return;
+            float[] detail = new float[1];
+            Bitmap banner = banner(a.info, MARK_W, MARK_H, detail);
+            Bitmap logo = logo(banner);
+            banner.recycle();
+            if (logo != null) {
+                // A real mark fills a fair part of its own box. A box held open by stray specks does not,
+                // and one that is square or filled edge to edge is the app's tile, not its mark.
+                Bitmap t = Bitmap.createScaledBitmap(logo, 48, 24, true);
+                int solid = 0;
+                for (int y = 0; y < 24; y++) for (int x = 0; x < 48; x++) if ((t.getPixel(x, y) >>> 24) > 128) solid++;
+                t.recycle();
+                float filled = solid / (48f * 24f);
+                boolean tile = filled > 0.7f || logo.getWidth() < logo.getHeight() * 1.1f;
+                a.logoSharp = filled < 0.14f || tile ? 0 : logo.getWidth() * detail[0] * 1.2f;
+                a.logo = logo;
+            }
+            a.markLoaded = true;
+        }
+    }
+
+    /** Load the marks of these apps off the main thread, so they are ready before focus reaches them. */
+    void warmMarks(final List<App> apps) {
+        new Thread(() -> { for (App a : apps) loadMark(a); }, "marks").start();
+    }
+
+    /**
+     * The app's TV banner at the highest density it ships (else its icon on a plate), drawn at w x h.
+     * detail[0], if asked for, receives how much real detail that holds: 1 when the source is at least that big.
+     */
+    private Bitmap banner(ResolveInfo ri, int w, int h, float[] detail) {
+        ApplicationInfo ai = ri.activityInfo.applicationInfo;
+        Bitmap b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(b);
         Drawable d = null;
         try {
             int res = ri.activityInfo.banner != 0 ? ri.activityInfo.banner : ai.banner;
             if (res != 0) d = pm.getResourcesForApplication(ai).getDrawableForDensity(res, android.util.DisplayMetrics.DENSITY_XXXHIGH);
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) { }   // no such density, or the package went away: fall back below
         if (d == null) d = ri.activityInfo.loadBanner(pm);
         if (d == null) d = pm.getApplicationBanner(ai);
         if (d != null) {
-            int native_ = d instanceof android.graphics.drawable.BitmapDrawable && ((android.graphics.drawable.BitmapDrawable) d).getBitmap() != null
-                    ? ((android.graphics.drawable.BitmapDrawable) d).getBitmap().getWidth() : BANNER_W;
-            detail[0] = Math.min(1f, native_ / (float) BANNER_W);
-            d.setBounds(0, 0, BANNER_W, BANNER_H);
+            int sourceWidth = d instanceof android.graphics.drawable.BitmapDrawable && ((android.graphics.drawable.BitmapDrawable) d).getBitmap() != null
+                    ? ((android.graphics.drawable.BitmapDrawable) d).getBitmap().getWidth() : w;
+            if (detail != null) detail[0] = Math.min(1f, sourceWidth / (float) w);
+            d.setBounds(0, 0, w, h);
             d.draw(c);
             return b;
         }
         Drawable icon = ri.loadIcon(pm);
         c.drawColor(0xff20242c);
-        int s = (int) (BANNER_H * 0.5f);
-        icon.setBounds((BANNER_W - s) / 2, (BANNER_H - s) / 2, (BANNER_W + s) / 2, (BANNER_H + s) / 2);
+        int s = h / 2;
+        icon.setBounds((w - s) / 2, (h - s) / 2, (w + s) / 2, (h + s) / 2);
         icon.draw(c);
         return b;
     }
@@ -143,7 +169,7 @@ final class Apps {
      * small or transparent-edged (a mark on nothing), it sits on a disc of the app's colour
      * with its banner mark instead, so every icon is a full, rich circle.
      */
-    static Bitmap round(PackageManager pm, ResolveInfo ri, App a) {
+    private Bitmap round(ResolveInfo ri, App a) {
         Bitmap out = Bitmap.createBitmap(ROUND, ROUND, Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(out);
         android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG | android.graphics.Paint.FILTER_BITMAP_FLAG);
@@ -204,6 +230,7 @@ final class Apps {
             p.setShader(new android.graphics.LinearGradient(0, 0, 0, ROUND, Color.HSVToColor(new float[]{hsv[0], hsv[1], 0.46f}), deep, android.graphics.Shader.TileMode.CLAMP));
             c.drawRect(0, 0, ROUND, ROUND, p);
             p.setShader(null);
+            loadMark(a);
             Bitmap mark = a.logo != null ? a.logo : ib;
             float s = Math.min(ROUND * 0.62f / mark.getWidth(), ROUND * 0.42f / mark.getHeight());
             if (mark == ib) s = 0.7f;
@@ -215,18 +242,6 @@ final class Apps {
     }
 
     private static int far(int q, int r, int g, int b) { return Math.abs(((q >> 16) & 255) - r) + Math.abs(((q >> 8) & 255) - g) + Math.abs((q & 255) - b); }
-
-    static final int WATCH = 0, LISTEN = 1, EXPLORE = 2;
-
-    static int worldOf(String pkg, String label) {
-        String k = (pkg + " " + label).toLowerCase(java.util.Locale.US);
-        for (String m : new String[]{"spotify", "music", "gaana", "saavn", "wynk", "audible", "radio", "podcast", "soundcloud", "tunein"})
-            if (k.contains(m)) return LISTEN;
-        for (String v : new String[]{"netflix", "firebat", "prime", "hotstar", "youtube", "zee5", "sonyliv", "jio", "mxtech", "mx player",
-                "lionsgate", "ullu", "fawesome", "imdb", "video", "cinema", "movies", "tv", "hulu", "disney", "plex", "kodi", "vlc"})
-            if (k.contains(v)) return WATCH;
-        return EXPLORE;
-    }
 
     /**
      * Lift the mark off its banner: the background colour (read from the border) becomes
@@ -282,6 +297,9 @@ final class Apps {
 
     boolean isFavourite(App a) { return favourites().contains(a); }
 
+    /** True if the app has one of the places on Home. */
+    boolean onHome(App a) { int i = favourites().indexOf(a); return i >= 0 && i < HOME_SLOTS; }
+
     /** Every app: the ones on Home first, in Home order, then the rest by name. */
     List<App> ordered() {
         List<App> out = new ArrayList<>(favourites());
@@ -303,7 +321,7 @@ final class Apps {
         prefs.edit().putString("favs", sb.toString()).apply();
     }
 
-    /** A newly installed app joins the orbit by itself (unless the family unpinned it before). */
+    /** A newly installed app joins Home by itself, unless the family took it off before. */
     void autoPin(String pkg) {
         App a = byPkg.get(pkg);
         if (a == null || isFavourite(a) || prefs.getBoolean("unpinned:" + pkg, false)) return;
@@ -313,22 +331,6 @@ final class Apps {
     }
 
     void markUnpinned(App a, boolean unpinned) { prefs.edit().putBoolean("unpinned:" + a.pkg, unpinned).apply(); }
-
-    /** The app to offer first in a world: the last one opened there, else the first in it. */
-    App lead(int world) {
-        App best = null; long t = -1;
-        for (App a : all) if (a.world == world && lastOpened(a) > t) { t = lastOpened(a); best = a; }
-        if (t > 0) return best;
-        for (App a : favourites()) if (a.world == world) return a;
-        return best;
-    }
-
-    List<App> inWorld(int world) {
-        List<App> out = new ArrayList<>();
-        for (App a : favourites()) if (a.world == world) out.add(a);
-        for (App a : all) if (a.world == world && !out.contains(a)) out.add(a);
-        return out;
-    }
 
     void opened(App a) { prefs.edit().putLong("last:" + a.pkg, System.currentTimeMillis()).apply(); }
     long lastOpened(App a) { return prefs.getLong("last:" + a.pkg, 0); }

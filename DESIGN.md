@@ -66,6 +66,8 @@ rather than by luck:
 1. **Environments are graded.** `tools/environments.py` soft-caps luminance at 0.085 wherever
    bare text can sit on Home — the left 40 % of the screen and the bottom 32 % — and lets the
    picture be bright (up to about 0.42) only in the upper-right "light well". Hue is preserved.
+   (One exception by design: the Earth in *Earthset* sits just left of centre, at a height
+   where Home has no text.)
 2. **Away from Home the room dims.** Other pages replace the sharp environment with its
    blurred, darkened copy, so bare text is safe anywhere on them.
 3. **Glass is tone-mapped.** `Env.tone` caps the frosted layer at luminance 0.068 (hue
@@ -74,7 +76,18 @@ rather than by luck:
 Measured on the device, with `contrast.py` on screenshots of every page in every environment
 (worst case over all ten environments, Mist unless noted):
 
-<!-- CONTRAST-TABLE -->
+| Page | Lowest contrast found | Where |
+|---|---|---|
+| Home | 4.7:1 | Date beside the time, on the Orbital sunrise photograph |
+| Home, any app focused (Nocturne) | 5.0:1 | Widgets, with "All apps" focused (room in its own colours) |
+| Apps | 5.2:1 | Names under icons, Aurora |
+| Today | 5.0:1 | Second lines on glass |
+| Backgrounds | 5.2:1 | Names under pictures, Aurora |
+| Settings | 5.2:1 | Values on the glass list |
+| Idle | 14.5:1 | Porcelain on the lower-left of the environment |
+
+The measure is deliberately harsh: Mist against the *brightest* 0.5 % of the background in
+each text region, after a 2 px blur.
 
 Solid Porcelain controls: Obsidian on Porcelain is 16.6:1, Graphite on Porcelain 13.1:1.
 
@@ -136,9 +149,11 @@ core, i.e. the palette itself), **Tide**, **Ember**, **Dune**, **Orchid**, **Gra
 are NASA photographs graded by the same script: **Earthset**, **Orbital sunrise**, **Aurora**,
 **Blue Marble**.
 
-On Home the environment is *re-lit*: its luminance is kept and 66 % of its colour is replaced
-by the focused app's own colour (30 % on photographs), cross-fading over 700 ms as focus
-moves. Glass is re-lit with it. On every other page the grade is neutral.
+On Home the artwork environments are *re-lit*: brightness is kept and 66 % of the colour is
+replaced by the focused app's own colour, cross-fading over 700 ms as focus moves. The light
+colour sits halfway between "same brightness" and the pure hue, so red stays crimson instead
+of turning pink. Glass is re-lit with it. Photographs are never re-lit (a pink Earth is
+wrong), and on every other page, and when idle, the room is in its own colours.
 
 ### Glass
 
@@ -172,7 +187,7 @@ under a second. Two forms, chosen by what the thing *is*:
 
 | The thing is… | Under focus it… | Used by |
 |---|---|---|
-| **an object** (an app, a picture) | comes forward 1.12x (pictures 1.07x), gains a 2.5 dp Porcelain ring standing 4.5 dp off its edge, lifts its shadow; its name turns from Mist to Porcelain and drops 7 dp to make room | App tiles, background thumbnails |
+| **an object** (an app, a picture) | comes forward 1.1x (pictures 1.07x), gains a 2.5 dp Porcelain ring standing 4 dp off its edge, lifts its shadow; its name turns from Mist to Porcelain and drops 7 dp to make room | App tiles, background thumbnails |
 | **a control** (a word you press) | becomes a solid Porcelain capsule with Obsidian text | Navigation items, settings rows |
 
 The page you are on is marked in the navigation by a faint Porcelain capsule (15 %); it is
@@ -257,8 +272,10 @@ last watched, so OK continues it.
 
 - Row: up to six favourites and "All apps", 92 dp discs on a 121 dp pitch. If the app last
   watched is not a favourite it takes the first place.
+- Hero: the app's own mark when its banner is sharp enough to be large, otherwise its name
+  in Manrope Light 72. It changes with a 10 dp slide as focus moves.
 - Hero line: `Continue · Opened 2 hours ago` for the last-watched app, `Opened yesterday`
-  for others, the app count for "All apps".
+  for others, `Press OK to open` for one never opened, the app count for "All apps".
 - Widgets (280 dp wide, not focusable): weather with the air reading; tonight's moon with the
   next sunrise or sunset. They show "No reading yet / Waiting for the network" when offline.
 
@@ -332,7 +349,21 @@ brings everything back.
 
 ---
 
-## 11. Checking a change
+## 11. Where things live
+
+| File | What it is |
+|---|---|
+| `Ui` | The tokens above (colour, space, type) and the helpers every screen builds with |
+| `Nova` | The activity: focus, the remote, launching, going idle |
+| `Page` and `HomePage`, `AppsPage`, `TodayPage`, `BackgroundsPage`, `SettingsPage` | One class per page |
+| `BottomBar`, `AppTile`, `Screensaver`, `SunArc` | Components |
+| `Room`, `Env`, `GlassPanel` | Materials: the environment and its light, the frost, glass |
+| `Motion` | The curves and the Reduced setting |
+| `Apps`, `Weather`, `Moon` | Data |
+| `Watcher`, `Boot` | Keeps the Home button pointing here on Fire OS |
+| `tools/environments.py` | Generates and grades the environments |
+
+## 12. Checking a change
 
 - `tools/environments.py` regenerates and regrades the environments.
 - `adb shell am start -n tv.nova/.Nova --ez audit true` logs (tag `AUDIT`) any text that does
