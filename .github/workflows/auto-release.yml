@@ -1,0 +1,44 @@
+name: Auto release
+
+# On every push to main that touches AndroidManifest.xml: if versionName has no
+# v<versionName> tag yet, build, sign and publish it. The tag is created by the release
+# itself, only after the build succeeds, so a failed run leaves no tag and can be re-run.
+on:
+  push:
+    branches: [main]
+    paths: [AndroidManifest.xml]
+  # Merges made by GitHub auto-merge (enabled with GITHUB_TOKEN) don't fire push
+  # workflows, so also check once a day.
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: v
+        run: |
+          ver=$(sed -n 's/.*android:versionName="\([^"]*\)".*/\1/p' AndroidManifest.xml | head -1)
+          [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || { echo "::error::bad versionName '$ver'"; exit 1; }
+          if git ls-remote --exit-code --tags origin "refs/tags/v$ver" >/dev/null; then
+            echo "v$ver already released."
+          else
+            echo "tag=v$ver" >> "$GITHUB_OUTPUT"
+          fi
+
+  release:
+    needs: check
+    if: needs.check.outputs.tag != ''
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.check.outputs.tag }}
+    secrets: inherit
