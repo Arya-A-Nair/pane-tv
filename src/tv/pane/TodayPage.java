@@ -1,4 +1,4 @@
-package tv.nova;
+package tv.pane;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -27,7 +27,7 @@ final class TodayPage extends Page {
     private final SkyArc skyArc;
     private final ImageView moon;
 
-    TodayPage(Nova host) {
+    TodayPage(Pane host) {
         super(host);
         context = header("Today");
         float gap = 16, width = Ui.W - 2 * Ui.MARGIN, top = Ui.CONTENT_TOP, h1 = 152, h2 = 140;

@@ -1,4 +1,4 @@
-package tv.nova;
+package tv.pane;
 
 import android.graphics.drawable.GradientDrawable;
 import android.text.format.DateUtils;
@@ -38,7 +38,7 @@ final class HomePage extends Page {
     private int selected;
     private int travel;   // -1 or 1 while focus is arriving from a move left or right
 
-    HomePage(Nova host) {
+    HomePage(Pane host) {
         super(host);
         LinearLayout clock = new LinearLayout(host);
         clock.setGravity(Gravity.BOTTOM);
@@ -153,7 +153,7 @@ final class HomePage extends Page {
             else Motion.nudge(tiles.get(selected).view, ui.px(right ? 7 : -7), 0);
         } else if (k == KeyEvent.KEYCODE_DPAD_CENTER) {
             AppTile t = tiles.get(selected);
-            Motion.press(t.disc, () -> { if (t.app == null) host.open(Nova.APPS); else host.launch(t); });
+            Motion.press(t.disc, () -> { if (t.app == null) host.open(Pane.APPS); else host.launch(t); });
         } else return false;
         return true;
     }

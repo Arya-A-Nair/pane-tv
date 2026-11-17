@@ -1,4 +1,4 @@
-package tv.nova;
+package tv.pane;
 
 import android.view.Gravity;
 import android.view.View;
@@ -9,12 +9,12 @@ import java.util.List;
 
 /** One of the five pages. A page owns its view, shows where focus is, and answers the remote while it holds focus. */
 abstract class Page {
-    final Nova host;
+    final Pane host;
     final Ui ui;
     final FrameLayout view;
     private final List<View[]> rows = new ArrayList<>();   // what rises into place, row after row, when the page opens
 
-    Page(Nova host) {
+    Page(Pane host) {
         this.host = host;
         ui = host.ui;
         view = new FrameLayout(host);

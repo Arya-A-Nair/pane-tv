@@ -1,4 +1,4 @@
-package tv.nova;
+package tv.pane;
 
 import android.graphics.Outline;
 import android.graphics.drawable.GradientDrawable;
@@ -22,7 +22,7 @@ final class BackgroundsPage extends Page {
     private final List<Tile> tiles = new ArrayList<>();
     private int selected;
 
-    BackgroundsPage(Nova host) {
+    BackgroundsPage(Pane host) {
         super(host);
         context = header("Backgrounds");
         float w = (Ui.W - 2 * Ui.MARGIN - (COLUMNS - 1) * GAP) / COLUMNS, pitch = w * 9 / 16f + 62;

@@ -1,4 +1,4 @@
-package tv.nova;
+package tv.pane;
 
 import android.view.KeyEvent;
 import android.widget.FrameLayout;
@@ -20,7 +20,7 @@ final class AppsPage extends Page {
     private int selected;
     private int travel;   // -1 or 1 while focus is arriving from a move left or right
 
-    AppsPage(Nova host) {
+    AppsPage(Pane host) {
         super(host);
         context = header("Apps");
         grid = new FrameLayout(host);   // rows outside the two on show are faded out, not clipped

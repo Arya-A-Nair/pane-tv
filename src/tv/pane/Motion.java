@@ -1,4 +1,4 @@
-package tv.nova;
+package tv.pane;
 
 import android.animation.TimeInterpolator;
 import android.view.View;

@@ -1,4 +1,4 @@
-package tv.nova;
+package tv.pane;
 
 import java.text.SimpleDateFormat;
 import java.util.Locale;
@@ -63,7 +63,7 @@ final class MoonPath {
     }
 
     /**
-     * Self-check: java -cp out/classes tv.nova.MoonPath
+     * Self-check: java -cp out/classes tv.pane.MoonPath
      * Compares tonight-style passes for Mumbai with rise and set times from PyEphem (a full ephemeris).
      */
     public static void main(String[] args) throws Exception {

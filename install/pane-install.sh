@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Pane installer for Fire TV / Android TV (macOS, Linux). Safe to re-run. No sudo.
 # Usage: pane-install.sh [TV_IP[:PORT]] [--apk FILE] [--dry-run] [--help]
-#        undo: adb uninstall tv.nova
+#        undo: adb uninstall tv.pane
 set -euo pipefail
 
-PKG="${PANE_PKG:-tv.nova}"
+PKG="${PANE_PKG:-tv.pane}"
 APK_URL="${PANE_APK_URL:-https://github.com/Arya-A-Nair/pane-tv/releases/latest/download/pane.apk}"
-ACTIVITY=".Nova"
+ACTIVITY=".Pane"
 
 ip="${PANE_TV:-}"
 apk=""

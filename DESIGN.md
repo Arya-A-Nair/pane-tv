@@ -1,6 +1,6 @@
 # Cinematic Spatialism
 
-The design language of Pane, a home screen for Fire TV. Everything in `src/tv/nova` implements what
+The design language of Pane, a home screen for Fire TV. Everything in `src/tv/pane` implements what
 is written here; if the two disagree, this file is right and the code has a bug.
 
 The screen is 1920 x 1080 px at density 2, so all measures below are in dp on a
@@ -401,7 +401,7 @@ brings everything back.
 | `BottomBar`, `AppTile`, `Screensaver`, `SkyArc`, `RollingText` | Components |
 | `Room`, `LivingSmoke`, `Env`, `GlassPanel` | Materials: the environment, its motion and its light, the frost, glass |
 | `Motion` | The curves and the Reduced setting |
-| `Apps`, `Weather`, `Moon`, `MoonPath` | Data. `MoonPath` has a self-check: `java -cp out/classes tv.nova.MoonPath` |
+| `Apps`, `Weather`, `Moon`, `MoonPath` | Data. `MoonPath` has a self-check: `java -cp out/classes tv.pane.MoonPath` |
 | `Watcher`, `Boot` | Keeps the Home button pointing here on Fire OS |
 | `tools/environments.py`, `tools/contrast.py` | Generate and grade the environments; measure contrast on a screenshot |
 
@@ -409,7 +409,7 @@ brings everything back.
 
 - `python3 tools/environments.py` regenerates and regrades the environments;
   `python3 tools/contrast.py shot.png home` measures a screenshot.
-- `adb shell am start -n tv.nova/.Nova --ez audit true` logs (tag `AUDIT`) any text that does
+- `adb shell am start -n tv.pane/.Nova --ez audit true` logs (tag `AUDIT`) any text that does
   not fit, any text under 13 sp, and any view outside the safe area.
 - Test states without touching the family's apps: `--ez dry true` (launches open nothing),
   `--ei aqi 40`, `--ei now 600` (minutes since midnight, for the daylight arc),

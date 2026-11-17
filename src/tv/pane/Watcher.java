@@ -1,4 +1,4 @@
-package tv.nova;
+package tv.pane;
 
 import android.app.Notification;
 import android.app.Service;
@@ -22,7 +22,7 @@ import java.io.InputStreamReader;
 
 /**
  * Fire OS will not let another app be Home, so this watches the system log and
- * brings NOVA forward whenever Amazon's home activity is started.
+ * brings Pane forward whenever Amazon's home activity is started.
  * After a Home press Android holds background activity starts for ~5 s (app-switch
  * protection); an Obsidian cover with the wordmark hides Amazon's screen meanwhile.
  * Runs in its own process so the redirect survives the UI being reclaimed.
@@ -30,8 +30,8 @@ import java.io.InputStreamReader;
 public class Watcher extends Service {
     static final String HOME_START = "cat=[android.intent.category.HOME]";
     static final String AMAZON_HOME = "com.amazon.tv.launcher/";
-    static final String NOVA_SHOWN = "Displayed tv.nova/";
-    // Android's APP_SWITCH_DELAY_TIME is 5000 ms; margin lets NOVA draw. Tune if Amazon peeks through.
+    static final String Pane_SHOWN = "Displayed tv.pane/";
+    // Android's APP_SWITCH_DELAY_TIME is 5000 ms; margin lets Pane draw. Tune if Amazon peeks through.
     static final long COVER_MS = 5600;
 
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -39,8 +39,8 @@ public class Watcher extends Service {
     private View cover;
     private Thread thread;
 
-    static void openNova(Context ctx) {
-        ctx.startActivity(new Intent(Intent.ACTION_MAIN).setClassName(ctx, "tv.nova.Nova")
+    static void openPane(Context ctx) {
+        ctx.startActivity(new Intent(Intent.ACTION_MAIN).setClassName(ctx, "tv.pane.Pane")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));
     }
 
@@ -48,7 +48,7 @@ public class Watcher extends Service {
         startForeground(1, new Notification.Builder(this).setContentTitle("Home")
                 .setSmallIcon(android.R.drawable.ic_menu_revert).build());
         if (thread == null || !thread.isAlive()) {
-            thread = new Thread(new Runnable() { public void run() { loop(); } }, "nova-watch");
+            thread = new Thread(new Runnable() { public void run() { loop(); } }, "pane-watch");
             thread.start();
         }
         return START_STICKY;
@@ -64,8 +64,8 @@ public class Watcher extends Service {
                 while ((line = r.readLine()) != null) {
                     if (line.contains(HOME_START) && line.contains(AMAZON_HOME)) {
                         main.post(new Runnable() { public void run() { showCover(); } });
-                        openNova(this);
-                    } else if (line.contains(NOVA_SHOWN)) {
+                        openPane(this);
+                    } else if (line.contains(Pane_SHOWN)) {
                         main.postDelayed(hide, 250);
                     }
                 }

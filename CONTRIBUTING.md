@@ -7,7 +7,7 @@ Thanks for helping. Pane is intentionally small, so please keep changes small to
 Plain Java, no Gradle. You need a JDK (17+), Android build-tools 35.0.0 and platform `android-25` in `$ANDROID_HOME` (default `~/Library/Android/sdk`). Then:
 
 ```sh
-./build.sh                      # produces nova.apk, signed with a local debug keystore
+./build.sh                      # produces pane.apk, signed with a local debug keystore
 PANE_TV=192.168.1.50 ./deploy.sh   # installs on your TV over adb
 ```
 

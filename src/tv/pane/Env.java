@@ -1,4 +1,4 @@
-package tv.nova;
+package tv.pane;
 
 import android.content.Context;
 import android.graphics.Bitmap;

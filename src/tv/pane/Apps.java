@@ -1,4 +1,4 @@
-package tv.nova;
+package tv.pane;
 
 import android.content.Context;
 import android.content.Intent;
@@ -38,12 +38,12 @@ final class Apps {
             "com.zee5.amazon", "com.onemainstream.sonyliv.android", "com.jio.media.stb.ondemand",
             "com.mxtech.videoplayer.television");
     // Never shown: ourselves and launcher plumbing.
-    static final List<String> HIDDEN = Arrays.asList("tv.nova",
+    static final List<String> HIDDEN = Arrays.asList("tv.pane",
             "tv.projectivy.plugin.wallpaperprovider.overflight", "com.amazon.tv.launcher", "com.amazon.ftv.profilepicker",
             "com.amazon.ftv.screensaver", "com.amazon.hedwig", "com.amazon.ssm", "com.amazon.vizzini.ftvcds",
             "com.android.documentsui", "com.android.providers.downloads.ui");
 
-    /** The largest an icon is ever drawn, in dp: the app icon flying to the centre when an app opens (Nova.launch). */
+    /** The largest an icon is ever drawn, in dp: the app icon flying to the centre when an app opens (Pane.launch). */
     static final float MAX_ICON_DP = 112;
     private final int iconPx, markW, markH, density;   // icon and banner sizes follow the display; see the constructor
     static final int HOME_SLOTS = 6; // favourites shown on Home; the rest stay one page away
@@ -54,7 +54,7 @@ final class Apps {
     private final PackageManager pm;
 
     Apps(Context ctx) {
-        prefs = ctx.getSharedPreferences("nova", Context.MODE_PRIVATE);
+        prefs = ctx.getSharedPreferences("pane", Context.MODE_PRIVATE);
         android.util.DisplayMetrics dm = ctx.getResources().getDisplayMetrics();
         density = Math.max(android.util.DisplayMetrics.DENSITY_XXXHIGH, dm.densityDpi);   // never decode below xxxhdpi, more on a denser screen
         iconPx = Math.max(192, Math.min(512, Math.round(MAX_ICON_DP * dm.density * 1.1f)));   // 246 px at 1080p, 493 px at 4K

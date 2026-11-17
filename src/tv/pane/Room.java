@@ -1,4 +1,4 @@
-package tv.nova;
+package tv.pane;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;

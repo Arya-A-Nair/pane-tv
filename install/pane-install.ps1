@@ -1,6 +1,6 @@
 # Pane installer for Fire TV / Android TV (Windows PowerShell 5.1+ / PowerShell 7). Safe to re-run.
 # Usage: .\pane-install.ps1 [-Ip 192.168.1.50[:5555]] [-Apk C:\path\pane.apk] [-DryRun]
-#        undo: adb uninstall tv.nova
+#        undo: adb uninstall tv.pane
 param(
   [Parameter(Position = 0)][string]$Ip = $env:PANE_TV,
   [string]$Apk = "",
@@ -8,9 +8,9 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
-$Pkg = if ($env:PANE_PKG) { $env:PANE_PKG } else { 'tv.nova' }
+$Pkg = if ($env:PANE_PKG) { $env:PANE_PKG } else { 'tv.pane' }
 $ApkUrl = if ($env:PANE_APK_URL) { $env:PANE_APK_URL } else { 'https://github.com/Arya-A-Nair/pane-tv/releases/latest/download/pane.apk' }
-$Activity = '.Nova'
+$Activity = '.Pane'
 
 function Die($msg) { Write-Host "Error: $msg" -ForegroundColor Red; exit 1 }
 # Anything that changes the TV goes through Run-Adb.

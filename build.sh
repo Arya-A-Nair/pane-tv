@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build nova.apk with plain SDK tools (no Gradle).
+# Build pane.apk with plain SDK tools (no Gradle).
 # Needs: brew openjdk, Android build-tools 35.0.0 and platform 25 in ~/Library/Android/sdk.
 set -e
 cd "$(dirname "$0")"
@@ -14,7 +14,7 @@ $JAVA_HOME/bin/javac -Xlint:-options --release 11 -cp "$JAR" -d out/classes $(fi
 $BT/d8 --release --min-api 22 --lib "$JAR" --output out $(find out/classes -name '*.class')
 (cd out && zip -q unsigned.apk classes.dex)
 $BT/zipalign -f 4 out/unsigned.apk out/aligned.apk
-[ -f nova.keystore ] || $JAVA_HOME/bin/keytool -genkeypair -keystore nova.keystore -storepass novatv -keypass novatv \
-  -alias nova -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=NOVA" >/dev/null 2>&1
-$BT/apksigner sign --ks nova.keystore --ks-pass pass:novatv --out nova.apk out/aligned.apk 2>/dev/null
-echo "built nova.apk ($(du -h nova.apk | cut -f1))"
+[ -f pane.keystore ] || $JAVA_HOME/bin/keytool -genkeypair -keystore pane.keystore -storepass pane-dev -keypass pane-dev \
+  -alias pane -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Pane" >/dev/null 2>&1
+$BT/apksigner sign --ks pane.keystore --ks-pass pass:pane-dev --out pane.apk out/aligned.apk 2>/dev/null
+echo "built pane.apk ($(du -h pane.apk | cut -f1))"

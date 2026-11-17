@@ -1,4 +1,4 @@
-package tv.nova;
+package tv.pane;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -34,7 +34,7 @@ final class Weather {
     private final Handler main = new Handler(Looper.getMainLooper());
 
     Weather(Context c, Listener l) {
-        prefs = c.getSharedPreferences("nova", Context.MODE_PRIVATE);
+        prefs = c.getSharedPreferences("pane", Context.MODE_PRIVATE);
         listener = l;
         String cached = prefs.getString("weather", null);
         if (cached != null) try { parse(new JSONObject(cached)); ok = true; } catch (Exception ignored) { }
@@ -43,7 +43,7 @@ final class Weather {
 
     private final Runnable refresh = new Runnable() {
         public void run() {
-            new Thread(new Runnable() { public void run() { fetch(); } }, "nova-weather").start();
+            new Thread(new Runnable() { public void run() { fetch(); } }, "pane-weather").start();
             main.postDelayed(this, 30 * 60_000L);
         }
     };
@@ -97,7 +97,7 @@ final class Weather {
     static final String[] AIR_NOTE = {"A good day for open windows", "Fine for most people", "Hard on sensitive lungs", "Keep the windows shut", "Stay indoors if you can", "Stay indoors"};
     static int airLevel(int aqi) { return aqi <= 50 ? 0 : aqi <= 100 ? 1 : aqi <= 150 ? 2 : aqi <= 200 ? 3 : aqi <= 300 ? 4 : 5; }
 
-    // Test overrides, set only from adb (see Nova.handleTestExtras).
+    // Test overrides, set only from adb (see Pane.handleTestExtras).
     static int testAqi = Integer.MIN_VALUE;
     static boolean testOffline;
 

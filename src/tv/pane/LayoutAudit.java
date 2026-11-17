@@ -1,4 +1,4 @@
-package tv.nova;
+package tv.pane;
 
 import android.graphics.Rect;
 import android.util.Log;

@@ -1,4 +1,4 @@
-package tv.nova;
+package tv.pane;
 
 import android.app.ActivityManager;
 import android.content.ComponentName;
@@ -32,7 +32,7 @@ final class SettingsPage extends Page {
     private final List<Row> rows = new ArrayList<>();
     private int selected;
 
-    SettingsPage(Nova host) {
+    SettingsPage(Pane host) {
         super(host);
         header("Settings");
         rows.add(new Row("Fire TV settings", null, () -> {

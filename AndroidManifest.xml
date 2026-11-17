@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="tv.nova" android:versionCode="1" android:versionName="0.1">
+    package="tv.pane" android:versionCode="1" android:versionName="1.0.0">
     <uses-sdk android:minSdkVersion="22" android:targetSdkVersion="25"/>
     <uses-feature android:name="android.software.leanback" android:required="false"/>
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
@@ -14,7 +14,7 @@
 
     <application android:label="Home" android:icon="@drawable/icon" android:banner="@drawable/banner"
         android:allowBackup="false" android:hardwareAccelerated="true" android:largeHeap="false">
-        <activity android:name=".Nova" android:launchMode="singleTask" android:stateNotNeeded="true"
+        <activity android:name=".Pane" android:launchMode="singleTask" android:stateNotNeeded="true"
             android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
             android:screenOrientation="landscape" android:resumeWhilePausing="true"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|uiMode"

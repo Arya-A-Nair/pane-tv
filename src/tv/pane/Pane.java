@@ -1,4 +1,4 @@
-package tv.nova;
+package tv.pane;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -24,7 +24,7 @@ import java.util.Calendar;
  * bottom bar, the screensaver — and owns what crosses them: where focus is, the remote,
  * launching an app, and going idle. The design language is written down in DESIGN.md.
  */
-public class Nova extends Activity {
+public class Pane extends Activity {
     static final String[] PAGE_NAMES = {"Home", "Apps", "Today", "Backgrounds", "Settings"};
     static final int HOME = 0, APPS = 1, TODAY = 2, BACKGROUNDS = 3, SETTINGS = 4;
 
@@ -57,7 +57,7 @@ public class Nova extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().setBackgroundDrawable(new ColorDrawable(Ui.OBSIDIAN));
         ui = new Ui(this);
-        prefs = getSharedPreferences("nova", MODE_PRIVATE);
+        prefs = getSharedPreferences("pane", MODE_PRIVATE);
         Motion.reduced = prefs.getBoolean("reducedMotion", false);
         Env.load(this, Env.indexOf(prefs.getString("env", Env.IDS[0])), getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
         apps = new Apps(this);
@@ -337,7 +337,7 @@ public class Nova extends Activity {
         registerReceiver(new BroadcastReceiver() {
             @Override public void onReceive(Context c, Intent i) {
                 String pkg = i.getData() == null ? null : i.getData().getSchemeSpecificPart();
-                apps = new Apps(Nova.this);
+                apps = new Apps(Pane.this);
                 if (Intent.ACTION_PACKAGE_ADDED.equals(i.getAction()) && !i.getBooleanExtra(Intent.EXTRA_REPLACING, false) && pkg != null) apps.autoPin(pkg);
                 home.fillRow();
                 appsPage.fill();
