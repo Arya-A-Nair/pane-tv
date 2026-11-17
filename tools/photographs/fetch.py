@@ -18,6 +18,6 @@ def get(nid):
 
 for name, (nid, y) in CROPS.items():
     im = get(nid); w = im.width
-    im.crop((0, y, w, y + w * 9 // 16)).resize((3840, 2160), Image.LANCZOS).save(f'{here}/{name}.jpg', quality=95, subsampling=0)
+    im.crop((0, y, w, y + w * 9 // 16)).resize((3840, 2160), Image.Resampling.LANCZOS).save(f'{here}/{name}.jpg', quality=95, subsampling=0)
 # the whole Earth, square; environments.py sizes and places it
-get('GSFC_20171208_Archive_e001788').resize((2440, 2440), Image.LANCZOS).save(f'{here}/blue-marble.jpg', quality=95, subsampling=0)
+get('GSFC_20171208_Archive_e001788').resize((2440, 2440), Image.Resampling.LANCZOS).save(f'{here}/blue-marble.jpg', quality=95, subsampling=0)

@@ -19,7 +19,7 @@ u, v = xx / W, yy / H
 
 def vnoise(rng, cx, cy):
     g = (rng.random((cy + 3, cx + 3)).astype(np.float32) * 255)
-    im = Image.fromarray(g, 'F').resize((W + 2 * W // cx, H + 2 * H // cy), Image.BICUBIC)
+    im = Image.fromarray(g, 'F').resize((W + 2 * W // cx, H + 2 * H // cy), Image.Resampling.BICUBIC)
     a = np.asarray(im)[H // cy:H // cy + H, W // cx:W // cx + W] / 255.0
     return a
 
@@ -74,7 +74,7 @@ def finish(rgb, path, seed=1):
 def soft(a, k):
     """Cheap wide blur: down and back up with bicubic."""
     im = Image.fromarray(a.astype(np.float32), 'F')
-    return np.asarray(im.resize((W // k, H // k), Image.BILINEAR).resize((W, H), Image.BICUBIC))
+    return np.asarray(im.resize((W // k, H // k), Image.Resampling.BILINEAR).resize((W, H), Image.Resampling.BICUBIC))
 
 def smoke(seed, shadow, mid, hi, key):
     rng = np.random.default_rng(seed)
@@ -111,7 +111,7 @@ def photo(src, out, seed, spot=None, hi=0.42):
     global SPOT
     SPOT = spot
     src = src.convert('RGB')
-    if src.size != (W, H): src = src.resize((W, H), Image.LANCZOS)
+    if src.size != (W, H): src = src.resize((W, H), Image.Resampling.LANCZOS)
     a = np.asarray(src, np.float32) / 255
     a = np.where(a <= 0.04045, a / 12.92, ((a + 0.055) / 1.055) ** 2.4)
     finish(grade(a, 0.085, hi), out, seed); SPOT = None
@@ -122,7 +122,7 @@ def photos(src, out):
     photo(Image.open(f'{src}/aurora.jpg'), f'{out}/aurora.jpg', 3)
     # the whole Earth, set large in the upper right so it rises out of the light well
     d = int(1220 * SC)
-    e = Image.open(f'{src}/blue-marble.jpg').convert('RGB').resize((d, d), Image.LANCZOS)
+    e = Image.open(f'{src}/blue-marble.jpg').convert('RGB').resize((d, d), Image.Resampling.LANCZOS)
     c = Image.new('RGB', (W, H)); c.paste(e, (int(1470 * SC) - d // 2, int(330 * SC) - d // 2))
     photo(c, f'{out}/marble.jpg', 4)
 
