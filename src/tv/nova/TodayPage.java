@@ -14,15 +14,16 @@ import java.text.SimpleDateFormat;
 import java.util.Locale;
 
 /**
- * Today: four readings to take in at a glance — weather, air, daylight, moon. Each has the
+ * Today: four readings to take in at a glance — weather, air, the sky (the sun by day, the
+ * moon's path by night), and the moon's phase. Each has the
  * same anatomy (a quiet label, one large figure, two lines beside it) and one small drawing
  * of its own. Nothing here is selectable.
  */
 final class TodayPage extends Page {
-    private final TextView context, city, temperature, condition, range, airIndex, airName, airNote, daylight, daylightNote, moonName, moonNote;
+    private final TextView context, city, temperature, condition, range, airIndex, airName, airNote, skyCaption, skyValue, skyNote, moonName, moonNote;
     private final HourlyCurve hourly;
     private final AirScale airScale;
-    private final SunArc sunArc;
+    private final SkyArc skyArc;
     private final ImageView moon;
 
     TodayPage(Nova host) {
@@ -50,11 +51,11 @@ final class TodayPage extends Page {
         float second = top + h1 + gap;
         GlassPanel day = ui.panel(view, Ui.MARGIN, second, half, h2);
         TextView[] d = stacked(day, "Daylight", 24);
-        daylight = d[0]; daylightNote = d[1];
-        sunArc = new SunArc(host, ui.dp, ui.interMedium);
+        skyCaption = d[0]; skyValue = d[1]; skyNote = d[2];
+        skyArc = new SkyArc(host, ui.dp, ui.interMedium);
         FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(ui.px(196), ui.px(h2 - 40), Gravity.END);
         sl.setMargins(0, ui.px(22), ui.px(24), 0);
-        day.addView(sunArc, sl);
+        day.addView(skyArc, sl);
 
         GlassPanel sky = ui.panel(view, Ui.MARGIN + half + gap, second, half, h2);
         moon = new ImageView(host);
@@ -62,7 +63,7 @@ final class TodayPage extends Page {
         ml.leftMargin = ui.px(24);
         sky.addView(moon, ml);
         TextView[] m = stacked(sky, "Moon", 144);
-        moonName = m[0]; moonNote = m[1];
+        moonName = m[1]; moonNote = m[2];
         refresh();
     }
 
@@ -91,7 +92,7 @@ final class TodayPage extends Page {
         return new TextView[]{caption, figure, first, second};
     }
 
-    /** A label, a value under it, a note under that. Returns {value, note}. */
+    /** A label, a value under it, a note under that. Returns {label, value, note}. */
     private TextView[] stacked(GlassPanel g, String label, float left) {
         TextView caption = ui.text(ui.inter, 14, Ui.MIST);
         caption.setText(label);
@@ -100,7 +101,7 @@ final class TodayPage extends Page {
         ui.place(g, value, left, 50);
         TextView note = ui.text(ui.inter, 14, Ui.MIST);
         ui.place(g, note, left, 96);
-        return new TextView[]{value, note};
+        return new TextView[]{caption, value, note};
     }
 
     @Override void refresh() {
@@ -118,10 +119,10 @@ final class TodayPage extends Page {
         airNote.setText(aqi < 0 ? "" : Weather.AIR_NOTE[Weather.airLevel(aqi)]);
         airScale.set(aqi < 0 ? -1 : Weather.airLevel(aqi));
 
-        sunArc.set(ready ? w.sunrise : "", ready ? w.sunset : "");
-        String[] left = sunArc.summary();
-        daylight.setText(left == null ? "–" : left[0]);
-        daylightNote.setText(left == null ? "No reading yet" : left[1]);
+        SkyArc.Reading sky = skyArc.update(ready ? w.sunrise : "", ready ? w.sunset : "", ready ? w.lat : Double.NaN, ready ? w.lon : Double.NaN);
+        skyCaption.setText(sky == null ? "Daylight" : sky.caption);
+        skyValue.setText(sky == null ? "–" : sky.value);
+        skyNote.setText(sky == null ? "No reading yet" : sky.note);
 
         long now = System.currentTimeMillis();
         double age = Moon.age(now), daysToFull = ((Moon.SYNODIC / 2 - age) % Moon.SYNODIC + Moon.SYNODIC) % Moon.SYNODIC;

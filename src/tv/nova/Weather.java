@@ -20,6 +20,8 @@ final class Weather {
     interface Listener { void onWeather(Weather w); }
 
     String city = "";
+    /** Where the reading is for, in degrees; NaN until the first reading. Used to find the moon. */
+    double lat = Double.NaN, lon = Double.NaN;
     float temp, hi, lo;
     int code, aqi = -1;
     String sunrise = "", sunset = "";
@@ -60,6 +62,8 @@ final class Weather {
                 f.put("_aqi", aq.getJSONObject("current").optInt("us_aqi", -1));
             } catch (Exception ignored) { }
             f.put("_city", loc.optString("city"));
+            f.put("_lat", loc.getDouble("lat"));
+            f.put("_lon", loc.getDouble("lon"));
             prefs.edit().putString("weather", f.toString()).apply();
             parse(f);
             ok = true;
@@ -69,6 +73,8 @@ final class Weather {
 
     private void parse(JSONObject f) throws Exception {
         city = f.optString("_city");
+        lat = f.optDouble("_lat", Double.NaN);
+        lon = f.optDouble("_lon", Double.NaN);
         JSONObject cur = f.getJSONObject("current");
         temp = (float) cur.getDouble("temperature_2m");
         code = cur.getInt("weather_code");

@@ -1,6 +1,6 @@
 # Cinematic Spatialism
 
-The design language of this Fire TV home screen. Everything in `src/tv/nova` implements what
+The design language of Pane, a home screen for Fire TV. Everything in `src/tv/nova` implements what
 is written here; if the two disagree, this file is right and the code has a bug.
 
 The screen is 1920 x 1080 px at density 2, so all measures below are in dp on a
@@ -41,8 +41,8 @@ weather, no mono type except one block of system facts, no card around every ele
 | Graphite | `#20242C` | 0.018 | Secondary text on Porcelain |
 | Porcelain | `#E9ECF2` | 0.837 | All primary text; the focus colour (rings and focused controls) |
 | Mist | `#CED4DF` | 0.655 | Secondary text: labels, captions, unfocused names |
-| Glacier | `#A4B8EE` | 0.483 | A mark that says "selected / in use" (current background, apps that are on Home) |
-| Champagne | `#B4A28C` | 0.374 | Warmth and time: the sun's path, the colon of the idle clock (as `#E0D2BF`) |
+| Glacier | `#A4B8EE` | 0.483 | A mark that says "in use" (current background, apps that are on Home); the moon's path at night |
+| Champagne | `#B4A28C` | 0.374 | Warmth and daytime: the sun's path, the colon of the idle clock (as `#E0D2BF`) |
 
 Air-quality steps, good to hazardous — **marks only, never text**:
 `#8FCBA8 #D9C58A #E0A66E #DE8266 #C97B9E #A97FB5`.
@@ -313,6 +313,13 @@ Every reading has the same anatomy: a Mist label, one Manrope figure, two lines 
 and one small drawing that is specific to it (a curve of the next twelve hours, a six-step
 air scale, the sun's path, the moon itself).
 
+The sky panel follows the real sky. By day it is the sun on its path, in Champagne, with the
+daylight left. From sunset to sunrise it becomes the moon's own path from moonrise to
+moonset, in Glacier, with the moon at tonight's phase where it is now — computed on the
+device for the TV's location (`MoonPath`, within about two minutes of a full ephemeris). It
+says "Moon sets at 00:40", "Moonrise at 23:40", "Moon set at 23:48" or "No moon", always
+with the next sunrise beneath. The two states share one layout and cross-fade.
+
 ### Backgrounds
 
 Two rows of five pictures, 154 x 86 dp, radius 12. The picture is the tile. The one in use
@@ -357,10 +364,10 @@ brings everything back.
 | `Ui` | The tokens above (colour, space, type) and the helpers every screen builds with |
 | `Nova` | The activity: focus, the remote, launching, going idle |
 | `Page` and `HomePage`, `AppsPage`, `TodayPage`, `BackgroundsPage`, `SettingsPage` | One class per page |
-| `BottomBar`, `AppTile`, `Screensaver`, `SunArc` | Components |
+| `BottomBar`, `AppTile`, `Screensaver`, `SkyArc` | Components |
 | `Room`, `Env`, `GlassPanel` | Materials: the environment and its light, the frost, glass |
 | `Motion` | The curves and the Reduced setting |
-| `Apps`, `Weather`, `Moon` | Data |
+| `Apps`, `Weather`, `Moon`, `MoonPath` | Data. `MoonPath` has a self-check: `java -cp out/classes tv.nova.MoonPath` |
 | `Watcher`, `Boot` | Keeps the Home button pointing here on Fire OS |
 | `tools/environments.py`, `tools/contrast.py` | Generate and grade the environments; measure contrast on a screenshot |
 

@@ -336,7 +336,7 @@ public class Nova extends Activity {
         if (i == null || i.getExtras() == null) return;
         if (i.hasExtra("dry")) dryRun = i.getBooleanExtra("dry", false);
         if (i.hasExtra("aqi")) Weather.testAqi = i.getIntExtra("aqi", 0);
-        if (i.hasExtra("now")) SunArc.testNow = i.getIntExtra("now", -1);
+        if (i.hasExtra("now")) SkyArc.testNow = i.getIntExtra("now", -1);
         if (i.hasExtra("noweather")) Weather.testOffline = i.getBooleanExtra("noweather", false);
         refreshPages();
         if (i.hasExtra("env")) useEnvironment(Env.indexOf(i.getStringExtra("env")));
