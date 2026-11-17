@@ -23,7 +23,7 @@ Pane replaces it with something calm: your apps, the time, the sky outside, and 
 
 ## See it move
 
-https://github.com/user-attachments/assets/8427675f-b959-4dcb-a98f-8ce6dfe07d4c
+https://github.com/user-attachments/assets/1841ed03-c422-4bb6-a7a9-47a75d8e2ce1
 
 <img src="docs/media/colour-spread.gif" alt="Moving between apps: the new app's colour spreads through the smoke like dye" width="100%">
 
