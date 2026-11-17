@@ -25,7 +25,10 @@ import java.util.Calendar;
  * launching an app, and going idle. The design language is written down in DESIGN.md.
  */
 public class Pane extends Activity {
+    /** The one SharedPreferences file: favourites, history, chosen environment, settings, cached weather. */
+    static final String PREFS = "pane";
     static final String[] PAGE_NAMES = {"Home", "Apps", "Today", "Backgrounds", "Settings"};
+    // Indices into PAGE_NAMES and the pages array. TODAY and BACKGROUNDS are only reached through the bar.
     static final int HOME = 0, APPS = 1, TODAY = 2, BACKGROUNDS = 3, SETTINGS = 4;
 
     Ui ui;
@@ -41,6 +44,7 @@ public class Pane extends Activity {
     private BottomBar bar;
     private Screensaver screensaver;
     private final Handler handler = new Handler();
+    private BroadcastReceiver packageReceiver;
 
     private int page;             // the page on show
     private boolean onBar;        // focus is on the bottom bar rather than in the page
@@ -50,6 +54,7 @@ public class Pane extends Activity {
     private int minuteShown = -1;
     private ImageView launchedIcon;   // the icon at the centre of the screen while its app is open, to fly home on return
     private Apps.App launchedApp;
+    private static final long MINUTE_MS = 60_000L;
     private static boolean dryRun;   // test hook: launches play their animation but open nothing
 
     @Override protected void onCreate(Bundle saved) {
@@ -57,7 +62,7 @@ public class Pane extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().setBackgroundDrawable(new ColorDrawable(Ui.OBSIDIAN));
         ui = new Ui(this);
-        prefs = getSharedPreferences("pane", MODE_PRIVATE);
+        prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         Motion.reduced = prefs.getBoolean("reducedMotion", false);
         Env.load(this, Env.indexOf(prefs.getString("env", Env.IDS[0])), getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
         apps = new Apps(this);
@@ -283,7 +288,7 @@ public class Pane extends Activity {
                 if (idle) screensaver.show(weather.summary());
             }
             long quiet = SystemClock.uptimeMillis() - lastInput;
-            if (!idle && !launching && hasWindowFocus() && quiet > prefs.getInt("ambientMin", SettingsPage.DEFAULT_SCREENSAVER_MINUTES) * 60_000L) sleep();
+            if (!idle && !launching && hasWindowFocus() && quiet > prefs.getInt("ambientMin", SettingsPage.DEFAULT_SCREENSAVER_MINUTES) * MINUTE_MS) sleep();
             handler.postDelayed(this, 1000 - System.currentTimeMillis() % 1000 + 5);
         }
     };
@@ -304,6 +309,13 @@ public class Pane extends Activity {
     @Override protected void onPause() {
         super.onPause();
         room.pause();
+    }
+
+    @Override protected void onDestroy() {
+        unregisterReceiver(packageReceiver);
+        handler.removeCallbacksAndMessages(null);
+        weather.stop();
+        super.onDestroy();
     }
 
     /** The Home button (redirected here by Watcher) always lands on Home. */
@@ -334,7 +346,7 @@ public class Pane extends Activity {
         f.addAction(Intent.ACTION_PACKAGE_REMOVED);
         f.addAction(Intent.ACTION_PACKAGE_CHANGED);
         f.addDataScheme("package");
-        registerReceiver(new BroadcastReceiver() {
+        packageReceiver = new BroadcastReceiver() {
             @Override public void onReceive(Context c, Intent i) {
                 String pkg = i.getData() == null ? null : i.getData().getSchemeSpecificPart();
                 apps = new Apps(Pane.this);
@@ -344,7 +356,8 @@ public class Pane extends Activity {
                 refreshPages();
                 showFocus(false);
             }
-        }, f);
+        };
+        registerReceiver(packageReceiver, f);
     }
 
     // ---------------------------------------------------------------- test hooks (adb only)

@@ -19,6 +19,9 @@ import org.json.JSONObject;
 final class Weather {
     interface Listener { void onWeather(Weather w); }
 
+    private static final long REFRESH_MS = 30 * 60_000L;
+    private static final int TIMEOUT_MS = 8000;
+
     String city = "";
     /** Where the reading is for, in degrees; NaN until the first reading. Used to find the moon. */
     double lat = Double.NaN, lon = Double.NaN;
@@ -34,22 +37,26 @@ final class Weather {
     private final Handler main = new Handler(Looper.getMainLooper());
 
     Weather(Context c, Listener l) {
-        prefs = c.getSharedPreferences("pane", Context.MODE_PRIVATE);
+        prefs = c.getSharedPreferences(Pane.PREFS, Context.MODE_PRIVATE);
         listener = l;
         String cached = prefs.getString("weather", null);
-        if (cached != null) try { parse(new JSONObject(cached)); ok = true; } catch (Exception ignored) { }
+        if (cached != null) try { parse(new JSONObject(cached)); ok = true; } catch (Exception stale) { }   // unreadable cache: wait for a fresh reading
         refresh.run();
     }
 
     private final Runnable refresh = new Runnable() {
         public void run() {
-            new Thread(new Runnable() { public void run() { fetch(); } }, "pane-weather").start();
-            main.postDelayed(this, 30 * 60_000L);
+            new Thread(Weather.this::fetch, "pane-weather").start();
+            main.postDelayed(this, REFRESH_MS);
         }
     };
 
+    /** Stop refreshing; the screen that owns this is going away. */
+    void stop() { main.removeCallbacksAndMessages(null); }
+
     private void fetch() {
         try {
+            // plain http: ip-api.com serves its free tier over http only
             JSONObject loc = new JSONObject(get("http://ip-api.com/json/?fields=status,city,lat,lon"));
             if (!"success".equals(loc.optString("status"))) return;
             String url = String.format(Locale.US, "https://api.open-meteo.com/v1/forecast?latitude=%.3f&longitude=%.3f"
@@ -60,15 +67,15 @@ final class Weather {
             try {
                 JSONObject aq = new JSONObject(get(String.format(Locale.US, "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=%.3f&longitude=%.3f&current=us_aqi", loc.getDouble("lat"), loc.getDouble("lon"))));
                 f.put("_aqi", aq.getJSONObject("current").optInt("us_aqi", -1));
-            } catch (Exception ignored) { }
+            } catch (Exception noAir) { }   // air quality is optional; the forecast is still worth showing
             f.put("_city", loc.optString("city"));
             f.put("_lat", loc.getDouble("lat"));
             f.put("_lon", loc.getDouble("lon"));
             prefs.edit().putString("weather", f.toString()).apply();
             parse(f);
             ok = true;
-            main.post(new Runnable() { public void run() { listener.onWeather(Weather.this); } });
-        } catch (Exception ignored) { } // offline: keep the cached reading
+            main.post(() -> listener.onWeather(this));
+        } catch (Exception offline) { }   // keep the cached reading
     }
 
     private void parse(JSONObject f) throws Exception {
@@ -137,8 +144,8 @@ final class Weather {
 
     private static String get(String u) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(u).openConnection();
-        c.setConnectTimeout(8000);
-        c.setReadTimeout(8000);
+        c.setConnectTimeout(TIMEOUT_MS);
+        c.setReadTimeout(TIMEOUT_MS);
         try (BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream(), "UTF-8"))) {
             StringBuilder sb = new StringBuilder();
             String line;

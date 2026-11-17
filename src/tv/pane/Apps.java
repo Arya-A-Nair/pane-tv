@@ -9,7 +9,14 @@ import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.RectF;
+import android.graphics.Shader;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.util.DisplayMetrics;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -54,9 +61,9 @@ final class Apps {
     private final PackageManager pm;
 
     Apps(Context ctx) {
-        prefs = ctx.getSharedPreferences("pane", Context.MODE_PRIVATE);
-        android.util.DisplayMetrics dm = ctx.getResources().getDisplayMetrics();
-        density = Math.max(android.util.DisplayMetrics.DENSITY_XXXHIGH, dm.densityDpi);   // never decode below xxxhdpi, more on a denser screen
+        prefs = ctx.getSharedPreferences(Pane.PREFS, Context.MODE_PRIVATE);
+        DisplayMetrics dm = ctx.getResources().getDisplayMetrics();
+        density = Math.max(DisplayMetrics.DENSITY_XXXHIGH, dm.densityDpi);   // never decode below xxxhdpi, more on a denser screen
         iconPx = Math.max(192, Math.min(512, Math.round(MAX_ICON_DP * dm.density * 1.1f)));   // 246 px at 1080p, 493 px at 4K
         markW = Math.max(960, Math.round(480 * dm.density));   // banners are lifted at 960 x 540 at 1080p, 1920 x 1080 at 4K
         markH = markW * 9 / 16;
@@ -136,13 +143,13 @@ final class Apps {
         Drawable d = null;
         try {
             int res = ri.activityInfo.banner != 0 ? ri.activityInfo.banner : ai.banner;
-            if (res != 0) d = pm.getResourcesForApplication(ai).getDrawableForDensity(res, density);
+            if (res != 0) d = pm.getResourcesForApplication(ai).getDrawableForDensity(res, density, null);
         } catch (Exception ignored) { }   // no such density, or the package went away: fall back below
         if (d == null) d = ri.activityInfo.loadBanner(pm);
         if (d == null) d = pm.getApplicationBanner(ai);
         if (d != null) {
-            int sourceWidth = d instanceof android.graphics.drawable.BitmapDrawable && ((android.graphics.drawable.BitmapDrawable) d).getBitmap() != null
-                    ? ((android.graphics.drawable.BitmapDrawable) d).getBitmap().getWidth() : w;
+            int sourceWidth = d instanceof BitmapDrawable && ((BitmapDrawable) d).getBitmap() != null
+                    ? ((BitmapDrawable) d).getBitmap().getWidth() : w;
             if (detail != null) detail[0] = Math.min(1f, sourceWidth / (float) w);
             d.setBounds(0, 0, w, h);
             d.draw(c);
@@ -184,16 +191,16 @@ final class Apps {
         final int SIZE = iconPx;
         Bitmap out = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(out);
-        android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG | android.graphics.Paint.FILTER_BITMAP_FLAG);
-        android.graphics.Path circle = new android.graphics.Path();
-        circle.addCircle(SIZE / 2f, SIZE / 2f, SIZE / 2f, android.graphics.Path.Direction.CW);
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        Path circle = new Path();
+        circle.addCircle(SIZE / 2f, SIZE / 2f, SIZE / 2f, Path.Direction.CW);
         c.clipPath(circle);
         Drawable icon = null;
         try {
             int res = ri.activityInfo.getIconResource();
             if (res == 0) res = ri.activityInfo.applicationInfo.icon;
-            icon = pm.getResourcesForApplication(ri.activityInfo.applicationInfo).getDrawableForDensity(res, density);
-        } catch (Exception ignored) { }
+            icon = pm.getResourcesForApplication(ri.activityInfo.applicationInfo).getDrawableForDensity(res, density, null);
+        } catch (Exception ignored) { }   // as for the banner: fall back to the default-density icon
         if (icon == null) icon = ri.loadIcon(pm);
         Bitmap ib = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888);
         icon.setBounds(0, 0, SIZE, SIZE);
@@ -239,7 +246,7 @@ final class Apps {
             Color.colorToHSV(base, hsv);
             hsv[2] = 0.32f; hsv[1] = Math.min(hsv[1], 0.6f);
             int deep = Color.HSVToColor(hsv);
-            p.setShader(new android.graphics.LinearGradient(0, 0, 0, SIZE, Color.HSVToColor(new float[]{hsv[0], hsv[1], 0.46f}), deep, android.graphics.Shader.TileMode.CLAMP));
+            p.setShader(new LinearGradient(0, 0, 0, SIZE, Color.HSVToColor(new float[]{hsv[0], hsv[1], 0.46f}), deep, Shader.TileMode.CLAMP));
             c.drawRect(0, 0, SIZE, SIZE, p);
             p.setShader(null);
             loadMark(a);
@@ -247,7 +254,7 @@ final class Apps {
             float s = Math.min(SIZE * 0.62f / mark.getWidth(), SIZE * 0.42f / mark.getHeight());
             if (mark == ib) s = 0.7f;
             float mw = mark.getWidth() * s, mh = mark.getHeight() * s;
-            c.drawBitmap(mark, null, new android.graphics.RectF((SIZE - mw) / 2, (SIZE - mh) / 2, (SIZE + mw) / 2, (SIZE + mh) / 2), p);
+            c.drawBitmap(mark, null, new RectF((SIZE - mw) / 2, (SIZE - mh) / 2, (SIZE + mw) / 2, (SIZE + mh) / 2), p);
         }
         ib.recycle();
         return out;
