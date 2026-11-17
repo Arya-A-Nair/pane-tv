@@ -66,6 +66,10 @@ public class Nova extends Activity {
     private int focus;            // item nearest the viewer
     private ValueAnimator turn;
 
+    private LinearLayout playing;
+    private ImageView playArt;
+    private TextView playTitle, playArtist, playHint;
+    private Media.Now now;
     private Drawer drawer;
     private Controls controls;
     private long lastInput = SystemClock.uptimeMillis();
@@ -102,6 +106,7 @@ public class Nova extends Activity {
         buildPlanet();
         buildSky();
         buildOrbit();
+        buildPlaying();
         drawer = new Drawer();
         controls = new Controls();
         weather = new Weather(this, new Weather.Listener() { public void onWeather(Weather w) { showWeather(); } });
@@ -384,6 +389,64 @@ public class Nova extends Activity {
         return "Opened " + DateUtils.getRelativeTimeSpanString(last, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS);
     }
 
+    // ================================================================== now playing
+
+    /** Whatever is playing in the background (music apps keep playing behind NOVA). Up pauses or resumes. */
+    private void buildPlaying() {
+        playing = new LinearLayout(this);
+        playing.setGravity(Gravity.CENTER_VERTICAL);
+        playing.setPadding(px(8), px(8), px(18), px(8));
+        Glass.apply(playing, px(20), Glass.ORNAMENT, dp, 18);
+        playArt = new ImageView(this);
+        playArt.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        playArt.setOutlineProvider(new android.view.ViewOutlineProvider() {
+            public void getOutline(View v, android.graphics.Outline o) { o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), px(12)); }
+        });
+        playArt.setClipToOutline(true);
+        playing.addView(playArt, new LinearLayout.LayoutParams(px(52), px(52)));
+        LinearLayout t = new LinearLayout(this);
+        t.setOrientation(LinearLayout.VERTICAL);
+        playTitle = text(interM, 13, PORCELAIN, 1f);
+        playTitle.setSingleLine(true);
+        playTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        playTitle.setMaxWidth(px(200));
+        playArtist = text(inter, 11, PORCELAIN, 0.6f);
+        playArtist.setSingleLine(true);
+        playArtist.setMaxWidth(px(200));
+        playHint = text(inter, 10, PORCELAIN, 0.45f);
+        t.addView(playTitle);
+        t.addView(playArtist);
+        t.addView(playHint);
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(-2, -2);
+        tl.leftMargin = px(12);
+        playing.addView(t, tl);
+        FrameLayout.LayoutParams l = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.START);
+        l.setMargins(px(46), 0, 0, px(52));
+        playing.setVisibility(View.GONE);
+        sky.addView(playing, l);
+    }
+
+    private void refreshPlaying() {
+        now = Media.current(this);
+        boolean show = now != null && mode != Mode.AMBIENT;
+        if (show) {
+            playTitle.setText(now.title);
+            playArtist.setText(now.artist == null ? "" : now.artist);
+            playHint.setText(now.playing ? "\u2191  Pause" : "\u2191  Play");
+            if (now.art != null) playArt.setImageBitmap(now.art);
+            else playArt.setImageDrawable(null);
+            playArt.setVisibility(now.art != null ? View.VISIBLE : View.GONE);
+        }
+        if (show && playing.getVisibility() != View.VISIBLE) {
+            playing.setVisibility(View.VISIBLE);
+            playing.setAlpha(0f);
+            playing.setTranslationY(px(12));
+            playing.animate().alpha(1f).translationY(0).setStartDelay(0).setDuration(Motion.ms(600)).setInterpolator(Motion.GLIDE).start();
+        } else if (!show && playing.getVisibility() == View.VISIBLE) {
+            playing.animate().alpha(0f).setDuration(Motion.ms(300)).withEndAction(new Runnable() { public void run() { playing.setVisibility(View.GONE); } }).start();
+        }
+    }
+
     // ================================================================== launch
 
     private void launch(View from, final Apps.App a) {
@@ -470,6 +533,7 @@ public class Nova extends Activity {
             date.setText(new SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(c.getTime()));
             long now = System.currentTimeMillis();
             if (c.get(Calendar.SECOND) == 0 || moonView.getDrawable() == null) updateMoon(now);
+            if (c.get(Calendar.SECOND) % 2 == 0) refreshPlaying();
             long idle = SystemClock.uptimeMillis() - lastInput;
             if (mode == Mode.ORBIT && !launching && hasWindowFocus() && idle > prefs.getInt("ambientMin", 3) * 60_000L) enterAmbient();
             ui.postDelayed(this, 1000 - now % 1000 + 5);
@@ -526,7 +590,12 @@ public class Nova extends Activity {
             case KeyEvent.KEYCODE_DPAD_DOWN: drawer.open(); return true;
             case KeyEvent.KEYCODE_MENU: controls.open(); return true;
             case KeyEvent.KEYCODE_BACK: if (focus != 0) turnTo(0); return true;
-            case KeyEvent.KEYCODE_DPAD_UP: return true;
+            case KeyEvent.KEYCODE_DPAD_UP:
+                if (now != null && now.controller != null) {
+                    if (now.playing) now.controller.getTransportControls().pause(); else now.controller.getTransportControls().play();
+                    ui.postDelayed(new Runnable() { public void run() { refreshPlaying(); } }, 400);
+                }
+                return true;
         }
         return super.dispatchKeyEvent(e);
     }

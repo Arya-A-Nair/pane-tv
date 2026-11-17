@@ -9,6 +9,7 @@ $A install -r nova.apk >/dev/null
 $A shell pm grant tv.nova android.permission.READ_LOGS
 $A shell appops set tv.nova SYSTEM_ALERT_WINDOW allow
 $A shell dumpsys deviceidle whitelist +tv.nova >/dev/null
+$A shell settings put secure enabled_notification_listeners tv.nova/tv.nova.Media  # now playing
 $A shell pm list packages | grep -q tv.homeredirect && $A uninstall tv.homeredirect >/dev/null || true  # superseded
 $A shell am start -n tv.nova/.Nova >/dev/null
 echo "NOVA deployed"
