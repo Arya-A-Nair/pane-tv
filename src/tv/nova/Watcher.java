@@ -45,7 +45,7 @@ public class Watcher extends Service {
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
-        startForeground(1, new Notification.Builder(this).setContentTitle("NOVA")
+        startForeground(1, new Notification.Builder(this).setContentTitle("Home")
                 .setSmallIcon(android.R.drawable.ic_menu_revert).build());
         if (thread == null || !thread.isAlive()) {
             thread = new Thread(new Runnable() { public void run() { loop(); } }, "nova-watch");

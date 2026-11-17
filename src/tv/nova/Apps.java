@@ -25,6 +25,9 @@ final class Apps {
         String pkg, label, version;
         Intent launch;
         Bitmap banner;      // 16:9, decoded once at card size
+        Bitmap logo;        // the mark alone, lifted off its banner background, for uniform dark tiles
+        Bitmap round;       // visionOS-style circular icon, from the app's highest-resolution icon
+        int world;          // WATCH, LISTEN or EXPLORE
         int accent;         // dominant vivid colour of the banner
         long installed;
     }
@@ -69,6 +72,9 @@ final class Apps {
             } catch (PackageManager.NameNotFoundException ignored) { }
             a.banner = banner(pm, ri.activityInfo.applicationInfo, ri);
             a.accent = accent(a.banner);
+            a.logo = logo(a.banner);
+            a.round = round(pm, ri, a);
+            a.world = worldOf(pkg, a.label);
             all.add(a);
             byPkg.put(pkg, a);
         }
@@ -115,6 +121,124 @@ final class Apps {
         return Color.HSVToColor(new float[]{hue, sat, 1f});
     }
 
+    static final int ROUND = 256; // px
+
+    /**
+     * The app's own icon at the highest density it ships, cropped to a circle. If the icon is
+     * small or transparent-edged (a mark on nothing), it sits on a disc of the app's colour
+     * with its banner mark instead, so every icon is a full, rich circle.
+     */
+    static Bitmap round(PackageManager pm, ResolveInfo ri, App a) {
+        Bitmap out = Bitmap.createBitmap(ROUND, ROUND, Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(out);
+        android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG | android.graphics.Paint.FILTER_BITMAP_FLAG);
+        android.graphics.Path circle = new android.graphics.Path();
+        circle.addCircle(ROUND / 2f, ROUND / 2f, ROUND / 2f, android.graphics.Path.Direction.CW);
+        c.clipPath(circle);
+        Drawable icon = null;
+        try {
+            int res = ri.activityInfo.getIconResource();
+            if (res == 0) res = ri.activityInfo.applicationInfo.icon;
+            icon = pm.getResourcesForApplication(ri.activityInfo.applicationInfo).getDrawableForDensity(res, android.util.DisplayMetrics.DENSITY_XXXHIGH);
+        } catch (Exception ignored) { }
+        if (icon == null) icon = ri.loadIcon(pm);
+        Bitmap ib = Bitmap.createBitmap(ROUND, ROUND, Bitmap.Config.ARGB_8888);
+        icon.setBounds(0, 0, ROUND, ROUND);
+        icon.draw(new Canvas(ib));
+        // does the icon fill its square (an opaque tile) or float on transparency?
+        int corners = 0;
+        int[] probe = {ib.getPixel(ROUND / 8, ROUND / 2), ib.getPixel(ROUND / 2, ROUND / 8), ib.getPixel(ROUND * 7 / 8, ROUND / 2), ib.getPixel(ROUND / 2, ROUND * 7 / 8)};
+        for (int px : probe) if ((px >>> 24) > 200) corners++;
+        if (corners >= 3) {
+            // opaque tile: find the tile's own edges (icons often ship with a margin) and fill the circle
+            // with the inside of the tile, so no square corners show
+            int[] px = new int[ROUND * ROUND];
+            ib.getPixels(px, 0, ROUND, 0, 0, ROUND, ROUND);
+            int x0 = ROUND, y0 = ROUND, x1 = 0, y1 = 0;
+            for (int y = 0; y < ROUND; y++) for (int x = 0; x < ROUND; x++) if ((px[y * ROUND + x] >>> 24) > 200) {
+                if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+            }
+            float bw = Math.max(1, x1 - x0), bh = Math.max(1, y1 - y0);
+            float sc = ROUND / Math.min(bw, bh) * 1.16f;  // past the tile's rounded corners
+            float cx = (x0 + x1) / 2f, cy = (y0 + y1) / 2f;
+            c.save();
+            c.translate(ROUND / 2f, ROUND / 2f);
+            c.scale(sc, sc);
+            c.translate(-cx, -cy);
+            c.drawBitmap(ib, 0, 0, p);
+            c.restore();
+        } else {
+            int base = a.accent;
+            float[] hsv = new float[3];
+            Color.colorToHSV(base, hsv);
+            hsv[2] = 0.32f; hsv[1] = Math.min(hsv[1], 0.6f);
+            int deep = Color.HSVToColor(hsv);
+            p.setShader(new android.graphics.LinearGradient(0, 0, 0, ROUND, Color.HSVToColor(new float[]{hsv[0], hsv[1], 0.46f}), deep, android.graphics.Shader.TileMode.CLAMP));
+            c.drawRect(0, 0, ROUND, ROUND, p);
+            p.setShader(null);
+            Bitmap mark = a.logo != null ? a.logo : ib;
+            float s = Math.min(ROUND * 0.62f / mark.getWidth(), ROUND * 0.42f / mark.getHeight());
+            if (mark == ib) s = 0.7f;
+            float mw = mark.getWidth() * s, mh = mark.getHeight() * s;
+            c.drawBitmap(mark, null, new android.graphics.RectF((ROUND - mw) / 2, (ROUND - mh) / 2, (ROUND + mw) / 2, (ROUND + mh) / 2), p);
+        }
+        ib.recycle();
+        return out;
+    }
+
+    static final int WATCH = 0, LISTEN = 1, EXPLORE = 2;
+
+    static int worldOf(String pkg, String label) {
+        String k = (pkg + " " + label).toLowerCase(java.util.Locale.US);
+        for (String m : new String[]{"spotify", "music", "gaana", "saavn", "wynk", "audible", "radio", "podcast", "soundcloud", "tunein"})
+            if (k.contains(m)) return LISTEN;
+        for (String v : new String[]{"netflix", "firebat", "prime", "hotstar", "youtube", "zee5", "sonyliv", "jio", "mxtech", "mx player",
+                "lionsgate", "ullu", "fawesome", "imdb", "video", "cinema", "movies", "tv", "hulu", "disney", "plex", "kodi", "vlc"})
+            if (k.contains(v)) return WATCH;
+        return EXPLORE;
+    }
+
+    /**
+     * Lift the mark off its banner: the background colour (read from the border) becomes
+     * transparent, near-black lettering turns porcelain so it reads on a dark tile, and the
+     * result is cropped to the mark. Busy banners (photos, gradients) are kept whole.
+     */
+    static Bitmap logo(Bitmap banner) {
+        int w = banner.getWidth(), h = banner.getHeight();
+        int[] px = new int[w * h];
+        banner.getPixels(px, 0, w, 0, 0, w, h);
+        // background estimated per pixel from the four edges, so gradients drop out too
+        int e = 3;
+        int[] out = new int[w * h];
+        int minX = w, minY = h, maxX = -1, maxY = -1, kept = 0;
+        for (int y = 0; y < h; y++) {
+            int lc = px[y * w + e], rc = px[y * w + w - 1 - e];
+            for (int x = 0; x < w; x++) {
+                int tc = px[e * w + x], bc = px[(h - 1 - e) * w + x];
+                float fx = x / (float) (w - 1), fy = y / (float) (h - 1);
+                float br = (((lc >> 16) & 255) * (1 - fx) + ((rc >> 16) & 255) * fx + ((tc >> 16) & 255) * (1 - fy) + ((bc >> 16) & 255) * fy) / 2;
+                float bg = (((lc >> 8) & 255) * (1 - fx) + ((rc >> 8) & 255) * fx + ((tc >> 8) & 255) * (1 - fy) + ((bc >> 8) & 255) * fy) / 2;
+                float bb = ((lc & 255) * (1 - fx) + (rc & 255) * fx + (tc & 255) * (1 - fy) + (bc & 255) * fy) / 2;
+                int c = px[y * w + x], cr = (c >> 16) & 255, cg = (c >> 8) & 255, cb = c & 255;
+                double d = Math.sqrt((cr - br) * (cr - br) + (cg - bg) * (cg - bg) + (cb - bb) * (cb - bb));
+                double a = Math.max(0, Math.min(1, (d - 40) / 60.0));
+                if (a <= 0.02) continue;
+                int mx = Math.max(cr, Math.max(cg, cb)), mn = Math.min(cr, Math.min(cg, cb));
+                if (mx < 90 && mx - mn < 40) { cr = 233; cg = 236; cb = 242; } // dark lettering -> porcelain
+                out[y * w + x] = ((int) (255 * a) << 24) | (cr << 16) | (cg << 8) | cb;
+                kept++;
+                if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
+            }
+        }
+        if (kept < 40 || kept > px.length * 0.5) return null; // not a clean mark
+        Bitmap all = Bitmap.createBitmap(out, w, h, Bitmap.Config.ARGB_8888);
+        int pad = 4;
+        minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad); maxX = Math.min(w - 1, maxX + pad); maxY = Math.min(h - 1, maxY + pad);
+        Bitmap crop = Bitmap.createBitmap(all, minX, minY, maxX - minX + 1, maxY - minY + 1);
+        if (crop != all) all.recycle();
+        return crop;
+    }
+
     // ---- favourites & history ----
 
     List<App> favourites() {
@@ -144,6 +268,22 @@ final class Apps {
     }
 
     void markUnpinned(App a, boolean unpinned) { prefs.edit().putBoolean("unpinned:" + a.pkg, unpinned).apply(); }
+
+    /** The app to offer first in a world: the last one opened there, else the first in it. */
+    App lead(int world) {
+        App best = null; long t = -1;
+        for (App a : all) if (a.world == world && lastOpened(a) > t) { t = lastOpened(a); best = a; }
+        if (t > 0) return best;
+        for (App a : favourites()) if (a.world == world) return a;
+        return best;
+    }
+
+    List<App> inWorld(int world) {
+        List<App> out = new ArrayList<>();
+        for (App a : favourites()) if (a.world == world) out.add(a);
+        for (App a : all) if (a.world == world && !out.contains(a)) out.add(a);
+        return out;
+    }
 
     void opened(App a) { prefs.edit().putLong("last:" + a.pkg, System.currentTimeMillis()).apply(); }
     long lastOpened(App a) { return prefs.getLong("last:" + a.pkg, 0); }
