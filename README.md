@@ -24,7 +24,7 @@ Pane replaces it with something calm: your apps, the time, the sky outside, and 
 
 ## See it move
 
-<a href="docs/media/pane-launch.mp4"><img src="docs/media/poster.jpg" alt="Watch the 44-second launch film" width="100%"></a>
+<a href="https://github.com/Arya-A-Nair/pane-tv/releases/download/v1.0.0/pane-launch.mp4"><img src="docs/media/poster.jpg" alt="Watch the 44-second launch film" width="100%"></a>
 
 <img src="docs/media/colour-spread.gif" alt="Moving between apps: the new app's colour spreads through the smoke like dye" width="100%">
 
@@ -124,7 +124,7 @@ Pane has no accounts, no analytics and no ads. The only network requests are for
 ./build.sh                 # needs JDK 17+, Android build-tools 35 and platform 25
 PANE_TV=192.168.1.20 ./deploy.sh
 ```
-See [CONTRIBUTING.md](CONTRIBUTING.md). Releases are built and signed by GitHub Actions; see [docs/RELEASING.md](docs/RELEASING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for a map of the code, how to test without a TV and what's most useful to work on. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md). Releases are built and signed by GitHub Actions; see [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Credits
 
