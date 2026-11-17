@@ -367,7 +367,7 @@ has a Glacier dot before its name; the context line gives the credit of the focu
 112 │ ╭─────────────────────────────────────────╮     This TV                       │
     │ │ Fire TV settings                   Open │     Model    Amazon AFTMM         │
     │ │▐ Wi-Fi                             Open▌│     System   Android 7.1.2        │
-    │ │ Manage apps                        Open │     Address  192.168.1.16         │
+    │ │ Manage apps                        Open │     Address  192.168.1.50         │
     │ │ About this TV                      Open │     Storage  1.6 GB free          │
     │ │ Screensaver after             3 minutes │     Memory   482 MB free          │
     │ │ Motion                             Full │     Apps     18                   │
