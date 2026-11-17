@@ -23,7 +23,7 @@ import java.util.Locale;
  * facts about this TV on the right, the only place the interface speaks in mono.
  */
 final class SettingsPage extends Page {
-    private static final float LIST_WIDTH = 440, ROW_HEIGHT = 50, INSET = 6;
+    private static final float LIST_WIDTH = 440, ROW_HEIGHT = 44, INSET = 6;
     private static final int[] SCREENSAVER_MINUTES = {1, 3, 5, 10, 20};
     static final int DEFAULT_SCREENSAVER_MINUTES = 3;
 
@@ -44,6 +44,10 @@ final class SettingsPage extends Page {
         rows.add(new Row("Wi-Fi", null, open("android.settings.PICK_WIFI_NETWORK")));
         rows.add(new Row("Manage apps", null, open("android.settings.APPLICATION_SETTINGS")));
         rows.add(new Row("About this TV", null, open("android.settings.DEVICE_INFO_SETTINGS")));
+        rows.add(new Row("Hidden apps", () -> {
+            int n = host.apps.hiddenApps.size();
+            return n == 0 ? "None" : n + (n == 1 ? " app" : " apps");
+        }, () -> host.open(Pane.HIDDEN)));
         rows.add(new Row("Screensaver after", () -> {
             int m = host.prefs.getInt("ambientMin", DEFAULT_SCREENSAVER_MINUTES);
             return m + (m == 1 ? " minute" : " minutes");

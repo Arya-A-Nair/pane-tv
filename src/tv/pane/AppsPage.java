@@ -8,21 +8,25 @@ import java.util.List;
 
 /**
  * Every app, six to a row, two rows on show. The apps that are on Home come first, marked
- * with a Glacier dot; Menu adds the focused app to Home or takes it off, and the page says so.
+ * with a Glacier dot; Menu opens a sheet to add the focused app to Home or take it off, or to
+ * hide it, and the page says so. The same grid, in hiddenList mode, is the list of hidden apps,
+ * where OK brings an app back.
  */
 final class AppsPage extends Page {
     private static final int COLUMNS = 6;
     private static final float ROW_HEIGHT = 152, DISC = 80;
 
+    private final boolean hiddenList;
     private final FrameLayout grid;
     private final TextView context;
     private final List<AppTile> tiles = new ArrayList<>();
     private int selected;
     private int travel;   // -1 or 1 while focus is arriving from a move left or right
 
-    AppsPage(Pane host) {
+    AppsPage(Pane host, boolean hiddenList) {
         super(host);
-        context = header("Apps");
+        this.hiddenList = hiddenList;
+        context = header(hiddenList ? "Hidden apps" : "Apps");
         grid = new FrameLayout(host);   // rows outside the two on show are faded out, not clipped
         grid.setClipChildren(false);
         FrameLayout.LayoutParams gl = new FrameLayout.LayoutParams(-1, ui.px(2000));
@@ -37,7 +41,7 @@ final class AppsPage extends Page {
         grid.removeAllViews();
         tiles.clear();
         float cell = (Ui.W - 2 * Ui.MARGIN) / COLUMNS;
-        List<Apps.App> apps = host.apps.ordered();
+        List<Apps.App> apps = hiddenList ? host.apps.hiddenApps : host.apps.ordered();
         for (int i = 0; i < apps.size(); i++) {
             AppTile t = new AppTile(ui, apps.get(i), DISC, cell);
             FrameLayout.LayoutParams l = new FrameLayout.LayoutParams(ui.px(cell), -2);
@@ -51,7 +55,7 @@ final class AppsPage extends Page {
     }
 
     private void markOnHome() {
-        for (AppTile t : tiles) t.markOnHome(host.apps.onHome(t.app));
+        if (!hiddenList) for (AppTile t : tiles) t.markOnHome(host.apps.onHome(t.app));
     }
 
     @Override boolean selectable() { return !tiles.isEmpty(); }
@@ -67,11 +71,13 @@ final class AppsPage extends Page {
         }
         travel = 0;
         grid.animate().translationY(-top * ui.px(ROW_HEIGHT)).setDuration(animate ? Motion.ms(420) : 0).setInterpolator(Motion.GLIDE).start();
-        if (tiles.isEmpty()) context.setText("");
-        else context.setText(!holdsFocus ? tiles.size() + " apps" : host.apps.onHome(tiles.get(selected).app) ? "Menu  ·  Remove from Home" : "Menu  ·  Add to Home");
+        if (tiles.isEmpty()) context.setText(hiddenList ? "No hidden apps" : "");
+        else if (!holdsFocus) context.setText(tiles.size() + (hiddenList ? " hidden" : " apps"));
+        else context.setText(hiddenList ? "OK  ·  Show this app again" : "Menu  ·  More options");
     }
 
     @Override boolean key(int k) {
+        if (tiles.isEmpty()) return false;
         int n = tiles.size(), column = selected % COLUMNS;
         switch (k) {
             case KeyEvent.KEYCODE_DPAD_LEFT:
@@ -88,12 +94,22 @@ final class AppsPage extends Page {
                 else if (selected / COLUMNS < (n - 1) / COLUMNS) selected = n - 1;   // a short last row
                 else return false;
                 return true;
-            case KeyEvent.KEYCODE_DPAD_CENTER: { final AppTile t = tiles.get(selected); Motion.press(t.disc, () -> host.launch(t)); return true; }
-            case KeyEvent.KEYCODE_MENU:
-                host.apps.toggleFavourite(tiles.get(selected).app);
-                markOnHome();
-                host.homeChanged();
+            case KeyEvent.KEYCODE_DPAD_CENTER: {
+                final AppTile t = tiles.get(selected);
+                if (hiddenList) { host.apps.unhide(t.app); fill(); }   // gone from this list, back on the Apps page
+                else Motion.press(t.disc, () -> host.launch(t));
                 return true;
+            }
+            case KeyEvent.KEYCODE_MENU: {
+                if (hiddenList) return false;
+                final Apps.App app = tiles.get(selected).app;
+                final boolean onHome = host.apps.onHome(app);
+                host.openSheet(tiles.get(selected), app.label,
+                        new String[]{onHome ? "Remove from Home" : "Add to Home", "Hide this app", "Cancel"},
+                        new Runnable[]{() -> { host.apps.toggleFavourite(app); markOnHome(); host.homeChanged(); },
+                                () -> { host.apps.hide(app); fill(); host.homeChanged(); }, null});
+                return true;
+            }
             default: return false;
         }
     }
