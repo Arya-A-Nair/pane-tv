@@ -291,7 +291,7 @@ last watched, so OK continues it.
  48 ┌──────────────────────────────────────────────────────────────────────────────┐
     │ 18:19  Tuesday 17 November                           ╭───────────────────────╮│
     │                                                      │ 29°  Clear night      ││
-    │                                                      │      Mumbai           ││
+    │                                                      │      London           ││
 128 │ N E T F L I X          <- app mark or name, 72sp     │ ● Air 210 · Very unh. ││
     │                                                      ╰───────────────────────╯│
 226 │ Netflix · Continue · Opened 2 hours ago              ╭───────────────────────╮│
@@ -332,7 +332,7 @@ clip. Apps that are on Home come first, marked with a Glacier dot. No glass.
 
 ```
     │ Today                                        Tuesday 17 November · 18:19      │
-112 │ ╭ Mumbai ──────────────────────────────────╮ ╭ Air quality ─────────────────╮ │
+112 │ ╭ London ──────────────────────────────────╮ ╭ Air quality ─────────────────╮ │
     │ │ 29°  Clear night        28° 27° 26° ...  │ │ 210  Very unhealthy          │ │
     │ │      34° / 22°          •──•──•──•──•   │ │      Stay indoors if you can │ │
     │ │                         19  21  23  01   │ │ ▁▁ ▁▁ ▁▁ ▁▁ ██ ▁▁            │ │
@@ -396,20 +396,21 @@ brings everything back.
 | File | What it is |
 |---|---|
 | `Ui` | The tokens above (colour, space, type) and the helpers every screen builds with |
-| `Nova` | The activity: focus, the remote, launching, going idle |
+| `Pane` | The activity: focus, the remote, launching, going idle |
 | `Page` and `HomePage`, `AppsPage`, `TodayPage`, `BackgroundsPage`, `SettingsPage` | One class per page |
 | `BottomBar`, `AppTile`, `Screensaver`, `SkyArc`, `RollingText` | Components |
 | `Room`, `LivingSmoke`, `Env`, `GlassPanel` | Materials: the environment, its motion and its light, the frost, glass |
 | `Motion` | The curves and the Reduced setting |
 | `Apps`, `Weather`, `Moon`, `MoonPath` | Data. `MoonPath` has a self-check: `java -cp out/classes tv.pane.MoonPath` |
 | `Watcher`, `Boot` | Keeps the Home button pointing here on Fire OS |
-| `tools/environments.py`, `tools/contrast.py` | Generate and grade the environments; measure contrast on a screenshot |
+| `tools/` | Generate and check the environments, measure contrast on a screenshot (see `tools/README.md`) |
+| `LayoutAudit` | Debug-only layout check, run with `--ez audit true` (section 12); never runs on its own |
 
 ## 12. Checking a change
 
 - `python3 tools/environments.py` regenerates and regrades the environments;
   `python3 tools/contrast.py shot.png home` measures a screenshot.
-- `adb shell am start -n tv.pane/.Nova --ez audit true` logs (tag `AUDIT`) any text that does
+- `adb shell am start -n tv.pane/.Pane --ez audit true` logs (tag `AUDIT`) any text that does
   not fit, any text under 13 sp, and any view outside the safe area.
 - Test states without touching the family's apps: `--ez dry true` (launches open nothing),
   `--ei aqi 40`, `--ei now 600` (minutes since midnight, for the daylight arc),
