@@ -155,6 +155,15 @@ colour sits halfway between "same brightness" and the pure hue, so red stays cri
 of turning pink. Glass is re-lit with it. Photographs are never re-lit (a pink Earth is
 wrong), and on every other page, and when idle, the room is in its own colours.
 
+**The smoke is alive.** An artwork environment is drawn by `LivingSmoke`: the same still, one
+texel to one pixel, with every point drifting up to 9 px along a slow, smooth flow (periods of
+half a minute and more), so it never quite holds still and is never softer than the still.
+When focus moves along Home's row, a soft band of light in the new app's colour enters from
+the side focus moved toward and crosses in 1.5 s — brighter where the smoke is dense, so it
+reads as light scattering, not a wipe — and fades as the room settles into the new colour.
+It is the only thing that moves on its own. Photographs, the Reduced motion setting, and a
+GPU that cannot hold 30 fps all get the still instead.
+
 ### Glass
 
 Fire OS 7 has no backdrop blur, so glass is built honestly from the known scene:
@@ -229,7 +238,7 @@ Restrained, damped, never bouncing. All durations x0.6 when Motion is set to Red
 | Idle | interface fades over 1.4 s; the environment drifts in by 8 % over three minutes | linear |
 | First appearance | each block rises 14 dp, 80 ms apart, 800 ms | `GLIDE` |
 
-Nothing loops, pulses or glows while the screen is in use.
+Nothing in the interface loops, pulses or glows while the screen is in use; only the smoke behind it drifts.
 
 ---
 
@@ -365,7 +374,7 @@ brings everything back.
 | `Nova` | The activity: focus, the remote, launching, going idle |
 | `Page` and `HomePage`, `AppsPage`, `TodayPage`, `BackgroundsPage`, `SettingsPage` | One class per page |
 | `BottomBar`, `AppTile`, `Screensaver`, `SkyArc` | Components |
-| `Room`, `Env`, `GlassPanel` | Materials: the environment and its light, the frost, glass |
+| `Room`, `LivingSmoke`, `Env`, `GlassPanel` | Materials: the environment, its motion and its light, the frost, glass |
 | `Motion` | The curves and the Reduced setting |
 | `Apps`, `Weather`, `Moon`, `MoonPath` | Data. `MoonPath` has a self-check: `java -cp out/classes tv.nova.MoonPath` |
 | `Watcher`, `Boot` | Keeps the Home button pointing here on Fire OS |

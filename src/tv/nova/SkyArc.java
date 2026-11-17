@@ -33,6 +33,7 @@ final class SkyArc extends View {
     static int testNow = -1;
 
     private static final int UNKNOWN = 0, DAY = 1, NIGHT = 2;
+    private static final float GLOW = 17;   // radius of the halo round the sun or moon (dp)
     // a few fixed stars, as fractions of the view: sparing, and only at night
     private static final float[][] STARS = {{0.07f, 0.16f}, {0.30f, 0.05f}, {0.47f, 0.42f}, {0.71f, 0.10f}, {0.93f, 0.26f}, {0.60f, 0.55f}};
 
@@ -151,7 +152,8 @@ final class SkyArc extends View {
         if (mode == UNKNOWN) return;
         boolean night = mode == NIGHT;
         float w = getWidth(), h = getHeight();
-        float top = 8 * dp, base = h - 28 * dp, x0 = 14 * dp, x1 = w - 14 * dp;
+        // the path keeps a glow's width clear of every edge, so neither sun nor moon is ever cut off
+        float room = GLOW * dp + 3 * dp, top = room, base = h - 28 * dp, x0 = room, x1 = w - room;
         arc.reset();
         arc.moveTo(x0, base);
         arc.cubicTo(x0 + (x1 - x0) * 0.2f, top - (base - top) * 0.33f, x0 + (x1 - x0) * 0.8f, top - (base - top) * 0.33f, x1, base);
@@ -175,8 +177,8 @@ final class SkyArc extends View {
             c.drawPath(done, travelled);
             if (bodyUp) {
                 int glow = night ? 0xa4b8ee : 0xf2dcb8;
-                halo.setShader(new RadialGradient(at[0], at[1], 17 * dp, new int[]{0x66000000 | glow, 0x1f000000 | glow, glow}, new float[]{0f, 0.55f, 1f}, Shader.TileMode.CLAMP));
-                c.drawCircle(at[0], at[1], 17 * dp, halo);
+                halo.setShader(new RadialGradient(at[0], at[1], GLOW * dp, new int[]{0x66000000 | glow, 0x1f000000 | glow, glow}, new float[]{0f, 0.55f, 1f}, Shader.TileMode.CLAMP));
+                c.drawCircle(at[0], at[1], GLOW * dp, halo);
                 if (night && moon != null) c.drawBitmap(moon, at[0] - moon.getWidth() / 2f, at[1] - moon.getHeight() / 2f, body);
                 else { body.setColor(0xfffff4e2); c.drawCircle(at[0], at[1], 5 * dp, body); body.setColor(0xffffffff); }
             }

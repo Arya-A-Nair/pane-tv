@@ -155,9 +155,11 @@ final class HomePage extends Page {
     }
 
     @Override boolean key(int k) {
-        if (k == KeyEvent.KEYCODE_DPAD_LEFT) selected = Math.max(0, selected - 1);
-        else if (k == KeyEvent.KEYCODE_DPAD_RIGHT) selected = Math.min(tiles.size() - 1, selected + 1);
-        else if (k == KeyEvent.KEYCODE_DPAD_CENTER) {
+        if (k == KeyEvent.KEYCODE_DPAD_LEFT || k == KeyEvent.KEYCODE_DPAD_RIGHT) {
+            boolean right = k == KeyEvent.KEYCODE_DPAD_RIGHT;
+            int to = Math.max(0, Math.min(tiles.size() - 1, selected + (right ? 1 : -1)));
+            if (to != selected) { selected = to; host.lightFrom(right); }
+        } else if (k == KeyEvent.KEYCODE_DPAD_CENTER) {
             AppTile t = tiles.get(selected);
             if (t.app == null) host.open(Nova.APPS);
             else host.launch(t);

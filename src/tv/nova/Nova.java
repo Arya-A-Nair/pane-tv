@@ -97,6 +97,7 @@ public class Nova extends Activity {
         }
         bar.show(onBar ? barItem : -1, page);
         room.relight(page == HOME && !idle ? home.accent() : null, animate);
+        room.watch(page == HOME || idle);
     }
 
     private void show(int target) {
@@ -126,6 +127,9 @@ public class Nova extends Activity {
         home.focusLastWatched();
         show(HOME);
     }
+
+    /** Focus moved along Home's row: light follows it in from that side. */
+    void lightFrom(boolean right) { Integer accent = home.accent(); if (accent != null) room.sweep(right, accent); }
 
     /** The favourites changed: Home's row must follow. */
     void homeChanged() { home.fillRow(); }
@@ -275,9 +279,15 @@ public class Nova extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE);
         lastInput = SystemClock.uptimeMillis();
+        room.resume();
         if (idle) wake();
         if (entered) returnFromApp();
         else { entered = true; enter(); }
+    }
+
+    @Override protected void onPause() {
+        super.onPause();
+        room.pause();
     }
 
     /** The Home button (redirected here by Watcher) always lands on Home. */

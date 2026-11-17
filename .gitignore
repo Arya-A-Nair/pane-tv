@@ -4,3 +4,4 @@ out/
 *.jks
 .DS_Store
 *.idsig
+.claude/

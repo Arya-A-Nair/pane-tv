@@ -53,8 +53,8 @@ final class TodayPage extends Page {
         TextView[] d = stacked(day, "Daylight", 24);
         skyCaption = d[0]; skyValue = d[1]; skyNote = d[2];
         skyArc = new SkyArc(host, ui.dp, ui.interMedium);
-        FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(ui.px(196), ui.px(h2 - 40), Gravity.END);
-        sl.setMargins(0, ui.px(22), ui.px(24), 0);
+        FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(ui.px(204), ui.px(h2 - 26), Gravity.END);
+        sl.setMargins(0, ui.px(8), ui.px(20), 0);
         day.addView(skyArc, sl);
 
         GlassPanel sky = ui.panel(view, Ui.MARGIN + half + gap, second, half, h2);
