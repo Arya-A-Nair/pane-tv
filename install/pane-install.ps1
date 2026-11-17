@@ -3,94 +3,125 @@
 #        undo: adb uninstall tv.pane
 param(
   [Parameter(Position = 0)][string]$Ip = $env:PANE_TV,
-  [string]$Apk = "",
+  [string]$Apk = '',
   [switch]$DryRun
 )
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'  # the progress bar makes Invoke-WebRequest crawl on 5.1
 
 $Pkg = if ($env:PANE_PKG) { $env:PANE_PKG } else { 'tv.pane' }
 $ApkUrl = if ($env:PANE_APK_URL) { $env:PANE_APK_URL } else { 'https://github.com/Arya-A-Nair/pane-tv/releases/latest/download/pane.apk' }
 $Activity = '.Pane'
 
-function Die($msg) { Write-Host "Error: $msg" -ForegroundColor Red; exit 1 }
-# Anything that changes the TV goes through Run-Adb.
-function Run-Adb {
-  if ($DryRun) { Write-Host "[dry-run] adb $($args -join ' ')"; return }
-  & adb @args
-  if ($LASTEXITCODE -ne 0) { Die "adb $($args -join ' ') failed" }
-}
-function Adb-Out { (& adb -s $script:Serial @args | Out-String).Trim() }
+function Die($msg) { [Console]::Error.WriteLine("Error: $msg"); exit 1 }
 
-if ($DryRun) { Write-Host 'DRY RUN: read-only checks only; downloads, installs and grants are printed, not executed.' }
+# Captures adb's stdout only. stderr is left alone: on 5.1, redirecting native stderr under
+# ErrorActionPreference=Stop becomes a terminating error, and adb logs "daemon started" there.
+function Get-Adb {
+  param([string[]]$Arguments)
+  $ErrorActionPreference = 'Continue'
+  $out = & adb @Arguments | Out-String
+  if ($out) { $out.Trim() } else { '' }
+}
+
+# Anything that changes the TV goes through Invoke-Adb, which honours -DryRun.
+function Invoke-Adb {
+  param([string[]]$Arguments)
+  if ($DryRun) { Write-Output "[dry-run] adb $($Arguments -join ' ')"; return }
+  $ErrorActionPreference = 'Continue'
+  & adb @Arguments
+  if ($LASTEXITCODE -ne 0) { Die "adb $($Arguments -join ' ') failed" }
+}
+
+function Get-DeviceState {
+  $devices = Get-Adb -Arguments @('devices')
+  if ($devices -match ('(?m)^' + [regex]::Escape($Serial) + '\s+(\S+)')) { return $Matches[1] }
+  return ''
+}
+
+function Get-Prop {
+  param([string]$Name)
+  Get-Adb -Arguments @('-s', $Serial, 'shell', 'getprop', $Name)
+}
+
+if ($DryRun) { Write-Output 'DRY RUN: read-only checks only; downloads, installs and grants are printed, not executed.' }
 
 # 1. adb
 if (-not (Get-Command adb -ErrorAction SilentlyContinue)) {
-  Write-Host 'adb (Android platform-tools) is not installed. Install it, then run this again:'
-  Write-Host '  1. Download https://dl.google.com/android/repository/platform-tools-latest-windows.zip'
-  Write-Host '  2. Unzip it (for example to C:\platform-tools)'
-  Write-Host '  3. In PowerShell:  $env:Path += ";C:\platform-tools"   (or add it to PATH permanently)'
+  Write-Output 'adb (Android platform-tools) is not installed. Install it, then run this again:'
+  Write-Output '  1. Download https://dl.google.com/android/repository/platform-tools-latest-windows.zip'
+  Write-Output '  2. Unzip it (for example to C:\platform-tools)'
+  Write-Output '  3. In PowerShell:  $env:Path += ";C:\platform-tools"   (or add it to PATH permanently)'
   exit 1
 }
 
 # 2. TV address
 if (-not $Ip) {
-  Write-Host "What is your TV's IP address?"
-  Write-Host '  Fire TV: Settings > My Fire TV > About > Network.'
-  Write-Host '  Also turn on Settings > My Fire TV > Developer options > ADB debugging.'
+  Write-Output "What is your TV's IP address?"
+  Write-Output '  Fire TV: Settings > My Fire TV > About > Network.'
+  Write-Output '  Also turn on Settings > My Fire TV > Developer options > ADB debugging.'
   $Ip = Read-Host 'TV IP'
+  if ($Ip) { $Ip = $Ip.Trim() }
 }
 if (-not $Ip) { Die 'no IP given' }
 $Serial = if ($Ip -match ':') { $Ip } else { "${Ip}:5555" }
 if ($Serial -notmatch '^[A-Za-z0-9._:-]+$') { Die "that does not look like an IP address: $Serial" }
 
 # 3. connect; the TV shows an authorization prompt the first time
-& adb connect $Serial
+Get-Adb -Arguments @('connect', $Serial)
 $state = ''
-foreach ($attempt in 1..3) {
-  $line = (& adb devices) | Where-Object { $_ -match "^$([regex]::Escape($Serial))\s" } | Select-Object -First 1
-  $state = if ($line) { ($line -split '\s+')[1] } else { '' }
+for ($attempt = 1; $attempt -le 3; $attempt++) {
+  $state = Get-DeviceState
   if ($state -eq 'device') { break }
   if ($state -eq 'unauthorized') {
-    Write-Host "The TV is asking to allow this computer. Choose 'Always allow' on the TV screen."
+    Write-Output "The TV is asking to allow this computer. Choose 'Always allow' on the TV screen."
     Read-Host 'Press Enter once you have accepted' | Out-Null
-  } elseif ($attempt -lt 3) {
+  } elseif ($attempt -eq 3) {
+    break
+  } else {
     Start-Sleep -Seconds 3
   }
-  & adb connect $Serial | Out-Null
+  Get-Adb -Arguments @('connect', $Serial) | Out-Null
 }
 if ($state -ne 'device') {
-  Die "could not reach the TV at $Serial (state: $(if ($state) { $state } else { 'not found' })). Check the IP, that ADB debugging is on, and that the TV and this computer are on the same network."
+  $shown = if ($state) { $state } else { 'not found' }
+  Die "could not reach the TV at $Serial (state: $shown). Check the IP, that ADB debugging is on, and that the TV and this computer are on the same network."
 }
 
 # 4. device type
-$manufacturer = (Adb-Out shell getprop ro.product.manufacturer).ToLower()
-$model = Adb-Out shell getprop ro.product.model
-$chars = Adb-Out shell getprop ro.build.characteristics
-Write-Host "Found: $manufacturer $model ($chars)"
+$manufacturer = (Get-Prop -Name 'ro.product.manufacturer').ToLower()
+$model = Get-Prop -Name 'ro.product.model'
+$chars = Get-Prop -Name 'ro.build.characteristics'
+Write-Output "Found: $manufacturer $model ($chars)"
 $firetv = $manufacturer.StartsWith('amazon')
 
 # 5. APK
-$tmp = Join-Path ([IO.Path]::GetTempPath()) ("pane-" + [guid]::NewGuid())
+$tmp = Join-Path ([IO.Path]::GetTempPath()) ('pane-' + [guid]::NewGuid())
 New-Item -ItemType Directory -Path $tmp | Out-Null
 try {
   if (-not $Apk) {
-    Write-Host 'Downloading Pane...'
+    Write-Output 'Downloading Pane...'
     $Apk = Join-Path $tmp 'pane.apk'
     if ($DryRun) {
-      Write-Host "[dry-run] download $ApkUrl -> $Apk"
+      Write-Output "[dry-run] download $ApkUrl -> $Apk"
     } else {
       [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
       try { Invoke-WebRequest -UseBasicParsing -Uri $ApkUrl -OutFile $Apk }
       catch { Die "download failed: $ApkUrl (is there a published release yet?)" }
+      # Only fetching the .sha256 may fail open (none published). The comparison fails closed.
       $shaFile = Join-Path $tmp 'pane.apk.sha256'
-      try {
-        Invoke-WebRequest -UseBasicParsing -Uri "$ApkUrl.sha256" -OutFile $shaFile
-        $want = ((Get-Content $shaFile -TotalCount 1) -split '\s+')[0].ToLower()
-        $got = (Get-FileHash -Algorithm SHA256 $Apk).Hash.ToLower()
+      $haveSha = $true
+      try { Invoke-WebRequest -UseBasicParsing -Uri "$ApkUrl.sha256" -OutFile $shaFile }
+      catch { $haveSha = $false }
+      if ($haveSha) {
+        $want = ''
+        $shaLine = Get-Content -Path $shaFile -TotalCount 1
+        if ($shaLine) { $want = ($shaLine.Trim() -split '\s+')[0].ToLower() }
+        $got = (Get-FileHash -Algorithm SHA256 -Path $Apk).Hash.ToLower()
         if ($want -ne $got) { Die 'checksum mismatch, refusing to install' }
-        Write-Host 'Checksum OK.'
-      } catch {
-        Write-Host '(no checksum file found, skipping verification)'
+        Write-Output 'Checksum OK.'
+      } else {
+        Write-Output '(no checksum file found, skipping verification)'
       }
     }
   } elseif (-not $DryRun -and -not (Test-Path -LiteralPath $Apk)) {
@@ -98,24 +129,25 @@ try {
   }
 
   # 6. install + setup
-  Run-Adb -s $Serial install -r $Apk
+  Invoke-Adb -Arguments @('-s', $Serial, 'install', '-r', $Apk)
   if ($firetv) {
     # Fire OS blocks custom launchers; the background watcher needs these once.
-    Run-Adb -s $Serial shell pm grant $Pkg android.permission.READ_LOGS
-    Run-Adb -s $Serial shell appops set $Pkg SYSTEM_ALERT_WINDOW allow
-    Run-Adb -s $Serial shell dumpsys deviceidle whitelist "+$Pkg"
+    Invoke-Adb -Arguments @('-s', $Serial, 'shell', 'pm', 'grant', $Pkg, 'android.permission.READ_LOGS')
+    Invoke-Adb -Arguments @('-s', $Serial, 'shell', 'appops', 'set', $Pkg, 'SYSTEM_ALERT_WINDOW', 'allow')
+    Invoke-Adb -Arguments @('-s', $Serial, 'shell', 'dumpsys', 'deviceidle', 'whitelist', "+$Pkg")
   }
-  Run-Adb -s $Serial shell am start -n "$Pkg/$Activity"
+  Invoke-Adb -Arguments @('-s', $Serial, 'shell', 'am', 'start', '-n', "$Pkg/$Activity")
 }
 finally {
   Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
 }
 
-Write-Host ''
-Write-Host 'Pane is installed.'
+Write-Output ''
+if ($DryRun) { Write-Output 'Dry run complete. Nothing was changed on the TV.'; exit 0 }
+Write-Output 'Pane is installed.'
 if ($firetv) {
-  Write-Host 'Press the Home button on your remote: Pane should open.'
+  Write-Output 'Press the Home button on your remote: Pane should open.'
 } else {
-  Write-Host 'To make Pane your home screen: Settings > Apps > Default apps > Home screen app (wording varies), then choose Pane.'
+  Write-Output 'To make Pane your home screen: Settings > Apps > Default apps > Home screen app (wording varies), then choose Pane.'
 }
-Write-Host "To remove it:  adb -s $Serial uninstall $Pkg"
+Write-Output "To remove it:  adb -s $Serial uninstall $Pkg"
