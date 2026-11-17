@@ -3,6 +3,9 @@
 # Usage: pane-install.sh [TV_IP[:PORT]] [--apk FILE] [--dry-run] [--help]
 #        undo: adb uninstall tv.pane
 set -euo pipefail
+# Braced so bash reads the whole script before running it: with `curl | bash`, the script
+# arrives on stdin, and any command that reads stdin (adb) would otherwise eat the rest.
+{
 
 PKG="${PANE_PKG:-tv.pane}"
 APK_URL="${PANE_APK_URL:-https://github.com/Arya-A-Nair/pane-tv/releases/latest/download/pane.apk}"
@@ -58,12 +61,12 @@ fi
 case "$ip" in *:*) serial="$ip" ;; *) serial="$ip:5555" ;; esac
 case "$serial" in *[!A-Za-z0-9.:_-]*) die "that does not look like an IP address: $serial" ;; esac
 
-A() { adb -s "$serial" "$@"; }
+A() { adb -s "$serial" "$@" </dev/null; }
 
 # 3. connect; the TV shows an authorization prompt the first time
 # adb connect can hang for minutes on a wrong IP, so bound it (macOS has no `timeout`).
 connect() {
-  adb connect "$serial" 2>&1 &
+  adb connect "$serial" </dev/null 2>&1 &
   local pid=$! n=0
   while kill -0 "$pid" 2>/dev/null; do
     if [ "$n" -ge 100 ]; then
@@ -146,3 +149,5 @@ else
   say "To make Pane your home screen: Settings > Apps > Default apps > Home screen app (wording varies), then choose Pane."
 fi
 say "To remove it:  adb -s $serial uninstall $PKG"
+exit 0
+}
