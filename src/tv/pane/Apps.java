@@ -40,10 +40,16 @@ final class Apps {
     }
 
     // Shown first on a fresh install, in this order, if present.
+    // First-run Home, before the family has chosen: well-known apps in this order, if installed
+    // (Fire TV and Android TV package names), then the apps the family installed themselves.
     static final List<String> DEFAULT_FAVOURITES = Arrays.asList(
-            "com.netflix.ninja", "com.amazon.firebat", "in.startv.hotstar", "com.amazon.firetv.youtube",
-            "com.zee5.amazon", "com.onemainstream.sonyliv.android", "com.jio.media.stb.ondemand",
-            "com.mxtech.videoplayer.television");
+            "com.netflix.ninja", "com.amazon.firebat", "com.amazon.amazonvideo.livingroom",
+            "com.amazon.firetv.youtube", "com.google.android.youtube.tv", "com.google.android.youtube.tvunplugged",
+            "com.disney.disneyplus", "in.startv.hotstar", "com.hulu.livingroomplus", "com.wbd.stream", "com.hbo.hbonow",
+            "com.apple.atve.amazon.appletv", "com.apple.atve.androidtv.appletv", "com.cbs.ott", "com.peacocktv.peacockandroid",
+            "com.spotify.tv.android", "com.plexapp.android", "tv.twitch.android.viewer", "com.zee5.amazon",
+            "com.onemainstream.sonyliv.android", "com.jio.media.stb.ondemand");
+
     // Never shown: ourselves and launcher plumbing.
     static final List<String> HIDDEN = Arrays.asList("tv.pane",
             "tv.projectivy.plugin.wallpaperprovider.overflight", "com.amazon.tv.launcher", "com.amazon.ftv.profilepicker",
@@ -310,8 +316,24 @@ final class Apps {
         List<String> order = saved == null ? DEFAULT_FAVOURITES : Arrays.asList(saved.split(","));
         List<App> out = new ArrayList<>();
         for (String p : order) { App a = byPkg.get(p); if (a != null && !out.contains(a)) out.add(a); }
-        if (out.isEmpty()) out.addAll(all.subList(0, Math.min(8, all.size())));
+        if (saved == null) {   // first run: top up with apps the family installed, newest first
+            List<App> mine = new ArrayList<>();
+            for (App a : all) if (!out.contains(a) && userInstalled(a)) mine.add(a);
+            Collections.sort(mine, (x, y) -> Long.compare(installTime(y), installTime(x)));
+            for (App a : mine) { if (out.size() >= HOME_SLOTS) break; out.add(a); }
+        }
+        if (out.isEmpty()) out.addAll(all.subList(0, Math.min(HOME_SLOTS, all.size())));
         return out;
+    }
+
+    private boolean userInstalled(App a) {
+        try { return (pm.getApplicationInfo(a.pkg, 0).flags & ApplicationInfo.FLAG_SYSTEM) == 0; }
+        catch (PackageManager.NameNotFoundException e) { return false; }
+    }
+
+    private long installTime(App a) {
+        try { return pm.getPackageInfo(a.pkg, 0).firstInstallTime; }
+        catch (PackageManager.NameNotFoundException e) { return 0; }
     }
 
     boolean isFavourite(App a) { return favourites().contains(a); }
