@@ -58,6 +58,8 @@ public class Nova extends Activity {
     private TextView time, date, moonName, moonNext, wCity, wTemp, wSky, wLine, wAir, hint, focusName, focusMeta;
     private ImageView moonView;
     private SunArc sunArc;
+    private Rockets rockets;
+    private Cosmos cosmos;
     private View pin;
 
     // orbit
@@ -133,6 +135,8 @@ public class Nova extends Activity {
     // ================================================================== planet
 
     private void buildPlanet() {
+        cosmos = new Cosmos(this, dp);
+        sky.addView(cosmos, match());
         final ImageView starfield = new ImageView(this);
         sky.addView(starfield, match());
         root.post(new Runnable() { public void run() {
@@ -158,6 +162,8 @@ public class Nova extends Activity {
             }
         };
         sky.addView(pin, new FrameLayout.LayoutParams(px(18), px(18)));
+        rockets = new Rockets(this, planet, px(PLANET), dp);
+        sky.addView(rockets, match());
         leader = new Leader();
         sky.addView(leader, match());
         // the planet turns, very slightly, all the time
@@ -188,11 +194,21 @@ public class Nova extends Activity {
                         planet.animate().alpha(1f).translationY(0).setDuration(2200).setInterpolator(Motion.GLIDE).start();
                     }
                     placePin();
+                    aimSunGlow();
                 } });
             } }, "nova-light").start();
             ui.postDelayed(this, 10 * 60_000L);
         }
     };
+
+    /** The sky's warm glow sits on the side of the planet the sun is really on. */
+    private void aimSunGlow() {
+        double[] ss = Earth.subSolar(System.currentTimeMillis()), v = Earth.vec(ss[0], ss[1]);
+        double[] sv = Earth.project(v[0], v[1], v[2]);
+        double l = Math.hypot(sv[1], sv[2]) + 1e-6;
+        float x = (float) (PLANET_CX / 960f + sv[1] / l * 0.55f), y = (float) (PLANET_CY / 540f - sv[2] / l * 0.75f);
+        cosmos.setSun(Math.max(0.02f, Math.min(0.98f, x)), Math.max(0.05f, Math.min(0.6f, y)));
+    }
 
     private void placePin() {
         float[] at = Earth.locate(weather.lat, weather.lon, px(PLANET));
@@ -516,9 +532,12 @@ public class Nova extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE);
         lastInput = SystemClock.uptimeMillis();
+        cosmos.start();
         if (mode == Mode.AMBIENT) exitAmbient();
         if (!entered) { entered = true; enter(); } else comeBack();
     }
+
+    @Override protected void onPause() { super.onPause(); cosmos.stop(); }
 
     @Override protected void onNewIntent(Intent i) {
         super.onNewIntent(i);
