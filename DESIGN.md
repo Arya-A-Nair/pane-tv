@@ -195,8 +195,18 @@ Fire OS 7 has no backdrop blur, so glass is built honestly from the known scene:
 Edges are anti-aliased (`drawRoundRect` with a bitmap shader, not a clip path).
 
 **Glass is used for:** the navigation, the two widgets on Home, the four readings on Today,
-the settings list. **Glass is not used for:** app icons, background thumbnails, page titles,
+the settings list, the action sheet. **Glass is not used for:** app icons, background thumbnails, page titles,
 the hero, the idle clock, or anything that is a single line of text.
+
+### Action sheet
+
+A small glass panel, 248 dp wide, radius 28, opened by Menu on an app tile (`ActionSheet`). A Mist
+caption (14 sp) names the app; below it one Inter Medium 16 line per action in words, 38 dp tall,
+the focused one a solid Porcelain capsule with Obsidian text, as in Settings. It sits below the tile's
+name when that clears the navigation, otherwise above the icon, and never nearer than 48 dp to an
+edge. While it is open the page behind is dimmed by Obsidian at 50 % (the one flat veil, like Launch)
+so the sheet is the one thing to act on; the tile it is about keeps its ring. Up and Down choose,
+OK does it, Back or Menu closes it.
 
 ### Solid Porcelain
 
@@ -245,6 +255,8 @@ Restrained and damped. Small motions in small places; nothing decorative.
 |---|---|---|
 | Focus (scale, lift, name) | 300 ms | Spring, damping 0.86 (`Motion.FOCUS`) — settles with no visible overshoot |
 | An icon gains focus | 450 ms, once | A soft diagonal highlight crosses it, clipped to the circle; it leans 3° the way focus came from and settles flat |
+| Sheet opens, closes | 420 ms rise / 160 ms fade; 300 ms veil | `GLIDE`; the sheet rises 10 dp as the page dims |
+| Tiles trade places (Move left, Move right) | 520 ms | `GLIDE`: both slide one pitch into each other's place; focus stays on the moved app |
 | Press (OK) | 90 ms in, 260 ms out | The icon, row or picture gives to 96 %, the action fires, it springs back (the one place a little bounce is right) |
 | Nothing further that way | 90 ms + 300 ms | The focused thing leans up to 7 dp toward the edge and returns |
 | Bar selection | 300 ms | One pill glides from name to name, changing width as it goes (`GLIDE`) |
@@ -273,8 +285,10 @@ Nothing in the interface loops, pulses or glows while the screen is in use; only
 - **Down** from any page's content reaches the bar. On the bar, **Left/Right** change page at
   once (like tabs); **Up** or **OK** go into the page.
 - **Back** always returns to Home, focus on what was last watched.
-- **Menu** opens Settings — except in Apps, where it adds the focused app to Home or removes
-  it, and the page says so in words at the top right ("Menu · Add to Home").
+- **Menu** opens Settings — except on an app. On Home, Menu on an app opens the action sheet
+  (move left, move right, remove from Home, cancel) and a line under the hero says so ("Menu · Move
+  or remove"). In Apps it opens the sheet too (add to or remove from Home, hide this app, cancel) and
+  the page says so at the top right ("Menu · More options"). Back or Menu closes the sheet.
 - **Today** has nothing to select: it is for reading, so focus stays on the bar.
 - There are no long-presses, double-presses or hidden gestures.
 
@@ -317,7 +331,7 @@ last watched, so OK continues it.
 ### Apps
 
 ```
-    │ Apps                                                  Menu · Add to Home     │
+    │ Apps                                                  Menu · More options    │
 116 │   (◯)      (◯)      (◯)      (◯)      (◯)      (◯)                          │
     │ ● Netflix ● Prime  ● Hotstar ● YouTube ● Zee 5  ● Sony LIV                    │
 268 │   (◯)      (◯)      (◯)      (◯)      (◯)      (◯)                          │
@@ -374,8 +388,15 @@ has a Glacier dot before its name; the context line gives the credit of the focu
 424 │ ╰─────────────────────────────────────────╯                                   │
 ```
 
-One glass list, 440 dp wide, rows 50 dp. A row says in words what OK will do ("Open") or
+One glass list, 440 dp wide, rows 44 dp. A row says in words what OK will do ("Open") or
 shows its current value, which OK changes. The system facts are the only mono type.
+
+### Hidden apps
+
+Settings has a row "Hidden apps" showing how many (or "None"); OK opens the Apps grid again, now
+holding only the hidden apps, with "OK · Show this app again" at the top right. OK on an app brings it
+back to Apps (not to Home). Hidden apps are absent from Apps and Home and are never pinned to Home
+by themselves. Back returns to Home, as everywhere.
 
 ### Launch
 

@@ -62,6 +62,8 @@ final class Apps {
     static final int HOME_SLOTS = 6; // favourites shown on Home; the rest stay one page away
 
     final List<App> all = new ArrayList<>();
+    /** Apps the family hid: kept out of every list, and never pinned to Home by themselves. Stored by package name in prefs. */
+    final List<App> hiddenApps = new ArrayList<>();
     final Map<String, App> byPkg = new HashMap<>();
     private final SharedPreferences prefs;
     private final PackageManager pm;
@@ -74,6 +76,7 @@ final class Apps {
         markW = Math.max(960, Math.round(480 * dm.density));   // banners are lifted at 960 x 540 at 1080p, 1920 x 1080 at 4K
         markH = markW * 9 / 16;
         pm = ctx.getPackageManager();
+        List<String> hiddenNames = Arrays.asList(prefs.getString("hidden", "").split(","));
         List<ResolveInfo> found = new ArrayList<>();
         found.addAll(pm.queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0));
         found.addAll(pm.queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0));
@@ -92,12 +95,51 @@ final class Apps {
             a.accent = accent(small);
             small.recycle();
             a.round = round(ri, a);
-            all.add(a);
-            byPkg.put(pkg, a);
+            if (hiddenNames.contains(pkg)) hiddenApps.add(a);
+            else { all.add(a); byPkg.put(pkg, a); }
         }
-        Collections.sort(all, new Comparator<App>() {
-            public int compare(App x, App y) { return x.label.compareToIgnoreCase(y.label); }
-        });
+        byLabel(all);
+        byLabel(hiddenApps);
+    }
+
+    private static void byLabel(List<App> list) {
+        Collections.sort(list, (x, y) -> x.label.compareToIgnoreCase(y.label));
+    }
+
+    /** Take the app off Home and out of every list. */
+    void hide(App a) {
+        List<App> f = new ArrayList<>(favourites());
+        f.remove(a);
+        save(f);
+        all.remove(a);
+        byPkg.remove(a.pkg);
+        hiddenApps.add(a);
+        byLabel(hiddenApps);
+        saveHidden();
+    }
+
+    /** Bring a hidden app back to the Apps page (not to Home). */
+    void unhide(App a) {
+        hiddenApps.remove(a);
+        all.add(a);
+        byPkg.put(a.pkg, a);
+        byLabel(all);
+        saveHidden();
+    }
+
+    private void saveHidden() {
+        StringBuilder sb = new StringBuilder();
+        for (App x : hiddenApps) { if (sb.length() > 0) sb.append(','); sb.append(x.pkg); }
+        prefs.edit().putString("hidden", sb.toString()).apply();
+    }
+
+    /** Exchange the places of two favourites on Home. */
+    void swapFavourites(App a, App b) {
+        List<App> f = new ArrayList<>(favourites());
+        int i = f.indexOf(a), j = f.indexOf(b);
+        if (i < 0 || j < 0) return;
+        Collections.swap(f, i, j);
+        save(f);
     }
 
     /**

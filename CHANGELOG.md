@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Rearrange Home: Menu on an app opens a small glass sheet with Move left, Move right, Remove from Home and Cancel; tiles slide into place and the order is kept.
+- Hide apps: in Apps, Menu now opens a sheet (Add to or Remove from Home, Hide this app, Cancel). Hidden apps leave Apps and Home and are never pinned automatically; Settings has a "Hidden apps" row to show them again.
+
 ## [1.0.0]
 
 First public release.
